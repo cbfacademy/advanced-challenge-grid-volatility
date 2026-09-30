@@ -3,6 +3,7 @@
 import sqlite3
 from pathlib import Path
 
+import duckdb
 import pandas as pd
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -37,3 +38,18 @@ def query_sqlite(query: str) -> pd.DataFrame:
         return pd.read_sql_query(query, connect)
     finally:
         connect.close()
+
+def connect_duckdb():
+    """Connect to DuckDB and register the CSV as a view."""
+    con = duckdb.connect()
+    con.execute(f"CREATE OR REPLACE VIEW grid_volatility AS SELECT * FROM read_csv_auto('{CSV_PATH}')")
+    return con
+
+
+def query_duckdb(query: str) -> pd.DataFrame:
+    """Run a SQL query against DuckDB and return a DataFrame."""
+    con = connect_duckdb()
+    try:
+        return con.execute(query).df()
+    finally:
+        con.close()
