@@ -16,6 +16,7 @@ This repo is for the Grid Volatility Challenge. If you're a participant, here's 
 - Follow python conventions
 - Keep functions small and focused
 - Add docstrings to reusable functions
+- Use Python 3.12
 
 ## Questions?
 
