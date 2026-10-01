@@ -91,7 +91,6 @@ There is no analysis or forecast model yet. You'll be working on this!
 ## How to Use It
 
 ### Option 1: Interact with the Data Loader in Python
-
 Create a scratch script or run Python interactively:
 ```bash
 python
@@ -112,7 +111,6 @@ print(result)
 ```
 
 ### Option 2: Use SQL Directly
-
 Once the SQLite database exists (data/grid_volatility.db), you can query it with any SQLite client:
 ```bash
 sqlite3 data/grid_volatility.db "SELECT COUNT(*) FROM grid_volatility;"
@@ -123,9 +121,20 @@ Or with DuckDB's CLI:
 duckdb -c "SELECT * FROM 'data/grid_volatility_expanded_dataset.csv' LIMIT 5;"
 ```
 
-### Option 3: Build Your Own Analysis
+### Option 3: Use Jupyter
+The starter repo includes a Jupyter notebook at `notebooks/01_getting_started.ipynb` with cells demonstrating how to load the data and query it with SQLite and DuckDB.
 
-Create a new script in `src/`. Import the data loader and build from there.
+#### Launching the notebook
+With your virtual environment active:
+```bash
+jupyter notebook
+```
+
+A browser tab will open. Navigate to `notebooks/` and open `01_getting_started.ipynb`.
+
+#### If you haven't used Jupyter before
+
+Jupyter notebooks let you run code in small blocks ("cells") and see the output immediately. This is useful for exploring data, but the workflow differs from running a Python script. For a quick introduction, see the official [`Jupyter Notebook documentation`](https://docs.jupyter.org/en/latest/).
 
 ### Project Structure
 ```text
@@ -135,6 +144,8 @@ Create a new script in `src/`. Import the data loader and build from there.
 ├── docs/
 │   ├── BUILD_DAY_TIMELINE.md    # Schedule for the day
 │   └── CHALLENGE_README.md      # Full challenge requirements
+├── notebooks/
+│   ├── 01_getting_started.ipynb # Getting Started Jupyter notebook
 └── src/
     ├── __init__.py
     └── data_loader.py           # Load and query the data
