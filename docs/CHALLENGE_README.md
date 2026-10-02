@@ -7,8 +7,6 @@ Imagine trying to keep the power grid balanced when a sudden heatwave spikes air
 
 As renewable energy grows and extreme weather becomes more frequent, power grids experience rapid, unpredictable shifts in supply and demand. Missing these changes can lead to costly trading losses, severe power shortfalls, or massive price surges.
 
-In this challenge, you will step into the role of lead data architects and quantitative analysts.
-
 **Your task:** Build the pipeline and decision framework that a trading desk would use to anticipate volatility, hedge risk, and keep energy moving where it is needed most.
 
 ## Technical Expectations
@@ -40,25 +38,5 @@ A reviewer should be able to run the program and reproduce your key outputs with
 ## Pitching Session Rules
 
 - Strict **no-slide** rule
-- 5-minute live technical demo/walkthrough
-- 3-minute executive Q&A
-
-## Criterion
-
-### Shortlisting
-
-| Factor | Weight | What strong looks like |
-| :--- | :--- | :--- |
-| Problem framing | 25% | Clearly articulates the business decision, develops a focused and testable hypothesis, identifies key assumptions and risks |
-| Technical execution | 25% | Method is sound and appropriate to the time. Assumptions and limitations are acknowledged. Outputs are reproducible. |
-| Data handling | 25% | Identifies and documents seeded data issues. Handles gaps, outliers, etc. sensibly. |
-| Clarity of output | 25% | `DECISION_MEMO` and repo communicate the recommendation clearly. A reviewer can follow it without the team present. |
-
-### Pitch Day
-
-| Factor | Weight | What strong looks like |
-| :--- | :--- | :--- |
-| Decision clarity | 30% | States the decision and why. Demo tells one coherent story. |
-| Technical substance | 25% | Code runs cleanly. Can speak to methods and limitations clearly. |
-| Communication | 25% | Clear, confident, well-paced. Uses the allocated time fully. |
-| Q&A | 25% | Answers directly. Shows depth when probed. |
+- 6-minute live technical demo/walkthrough
+- 5-minute executive Q&A

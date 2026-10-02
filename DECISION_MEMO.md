@@ -1,13 +1,13 @@
 # Decision Memo – Grid Volatility Challenge
 
-**Team Name:** [Your team name]  
+**Team Name:** [Your team name! ]  
 **Date:** [Date]
 
 ---
 
 ## 1. Hypothesis (complete this by 11:20)
 
-*Note: please ensure that you have a commit at this time adding your hypothesis.*
+*Note: please ensure that you have a commit at this time **(11:20)** adding your hypothesis.*
 
 A good hypothesis is specific, testable, and states a clear relationship.
 
@@ -52,11 +52,7 @@ A good hypothesis is specific, testable, and states a clear relationship.
 
 **Core KPIs: How would you measure success?**
 
-> [E.g., "Forecast error (MAPE) below 5%," "Trade profitability above benchmark," etc.]
-
 **What would cause you to revisit the decision?**
-
-> [E.g., "If forecast error exceeds 10% for three consecutive days," "If actual demand deviates from forecast by more than 2 standard deviations," etc.]
 
 ---
 
@@ -64,11 +60,11 @@ A good hypothesis is specific, testable, and states a clear relationship.
 
 **What data issues did you identify and how did you handle them?**
 
-> [Document gaps, outliers, time-zone normalisations, duplicates, etc.]
+> [If present, document gaps, outliers, duplicates, etc.]
 
 ---
 
 ## 6. Appendix (optional)
 
-- Link to any relevant folders or outputs
+- Link to any relevant folders or outputs - please ensure these are arranged in a folder called `/outputs` 
 - Any other supporting material
