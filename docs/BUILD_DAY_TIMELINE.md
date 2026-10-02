@@ -7,8 +7,7 @@
 | 10:10 | Opening remarks |
 | 10:25 | Introduce challenge outline |
 | 10:30 | Teams form - initial brainstorming |
-| 11:20 | Hypothesis checkpoint |
-| 11:30 | Build |
+| 11:00 | Build |
 | 13:30 | Comfort break |
 | 13:55 | Welcome back |
 | 14:00 | Build |
