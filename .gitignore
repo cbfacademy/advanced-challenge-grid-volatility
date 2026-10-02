@@ -221,3 +221,7 @@ __marimo__/
 # Database
 data/*.db
 src/__pycache__/
+
+#OSX
+*/.DS_Store
+.DS_Store
