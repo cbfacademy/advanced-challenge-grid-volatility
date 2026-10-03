@@ -10,7 +10,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-OUTPUT = ROOT / "analysis" / "wind_hypothesis_backtest.html"
+OUTPUT = ROOT / "GA_analysis" / "wind_hypothesis_backtest.html"
 TZ = "Europe/London"
 ELEXON_START = pd.Timestamp("2023-01-01").date()
 WIND_THRESHOLD = 0.30
@@ -533,6 +533,11 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
             ),
         ),
         (
+            "Gas benchmark: always long (+25 MW)",
+            np.full(len(elexon), POSITION_MW),
+            np.full(len(elexon), POSITION_MW),
+        ),
+        (
             "Gas benchmark: always short (−25 MW)",
             np.full(len(elexon), -POSITION_MW),
             np.full(len(elexon), -POSITION_MW),
@@ -713,7 +718,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
             }
         )
     annual = pd.DataFrame(annual_rows)
-    annual.to_csv(ROOT / "analysis" / "wind_hypothesis_annual_pnl.csv", index=False)
+    annual.to_csv(ROOT / "GA_analysis" / "wind_hypothesis_annual_pnl.csv", index=False)
 
     gap_colors = {
         "wind_share": "#2563eb",
@@ -805,7 +810,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
     )
     full_chart = svg_chart(
         "Cumulative gross P/L by generation-mix signal",
-        "Daily P/L accumulated through 2 October 2026; 9am positions held to cashout.",
+        "Monthly P/L summed then accumulated through 2 October 2026; 9am positions held to cashout.",
         [
             (name, list(monthly_cumulative(series).items()), color)
             for name, series, color in (
@@ -858,7 +863,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
     )
     long_chart = svg_chart(
         "Cumulative gross P/L: go long when the generation signal is active",
-        "Long 25 MW only when the specified forecast share threshold is met; otherwise flat.",
+        "Monthly P/L summed then accumulated; long 25 MW only when the forecast threshold is met, otherwise flat.",
         [
             (
                 label,
@@ -903,7 +908,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
     )
     short_chart = svg_chart(
         "Cumulative gross P/L: go short when the generation signal is active",
-        "Short 25 MW only when the specified forecast share threshold is met; otherwise flat.",
+        "Monthly P/L summed then accumulated; short 25 MW only when the forecast threshold is met, otherwise flat.",
         [
             (
                 label,
@@ -948,7 +953,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
     )
     matched_chart = svg_chart(
         "Cumulative P/L on the Elexon overlap",
-        "1,367 delivery days from 2 January 2023 to 2 October 2026; hourly wind revisions applied to both half-hours.",
+        "Monthly P/L summed then accumulated across 1,367 delivery days from 2 January 2023 to 2 October 2026.",
         [
             (name, list(monthly_cumulative(series).items()), color)
             for name, series, color in (
@@ -1166,6 +1171,7 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <body>
 <h1>Wind, solar &amp; nuclear: historical visualisation &amp; gross backtest</h1>
 <p class="lede">GB market history through <strong>{end_date:%Y-%m-%d}</strong>. Positions are capped at ±25 MW; P/L follows the challenge formula and is before trading costs.</p>
+<p class="small">See the <a href="../GA_DECISION_MEMO.md">one-page decision memo</a> for the recommendation, trade-offs, and validation criteria; the <a href="../README.md">README</a> explains how to reproduce these outputs.</p>
 <div class="callout"><strong>Bottom line:</strong> high wind and wind-plus-solar shares show the clearest association with lower DA-HH prices versus CCGT SRMC. Solar by itself is sparse, and nuclear share is not monotonic with that price gap. The specified threshold rules made {money(full_stats[0]["total_pnl"])} (wind), {money(full_stats[1]["total_pnl"])} (solar), {money(full_stats[2]["total_pnl"])} (nuclear), {money(full_stats[3]["total_pnl"])} (wind + solar), and {money(full_stats[4]["total_pnl"])} (wind + solar + nuclear). Gas-referenced always short made {money(full_stats[6]["total_pnl"])} over the same full sample. These are illustrative gross backtests, not evidence of deployable alpha.</div>
 
 <h2>What was tested</h2>
@@ -1215,7 +1221,7 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <li>The Elexon revision direction had positive in-sample P/L over the overlap, but its 2023–2026 results reverse by year. From 2024 onward, revision-only is close to flat and combining it with the wind rule underperformed that rule alone.</li>
 <li>These are gross profits over observed historical prices, not a claim of net returns. They do not include execution prices, transaction costs, slippage, or out-of-sample parameter selection.</li>
 </ul>
-<p class="small">Reproduce from the repository root with <code>python analysis/wind_hypothesis_backtest.py</code>. The script writes this report and <code>analysis/wind_hypothesis_annual_pnl.csv</code>.</p>
+<p class="small">Reproduce from the repository root with <code>python GA_analysis/wind_hypothesis_backtest.py</code>. The script writes this report and <code>GA_analysis/wind_hypothesis_annual_pnl.csv</code>.</p>
 </body>
 </html>"""
     OUTPUT.write_text(html_report, encoding="utf-8")
@@ -1233,7 +1239,7 @@ def main() -> None:
     end_date = pd.Timestamp(args.end_date).date()
     build_report(end_date)
     print(f"Wrote {OUTPUT.relative_to(ROOT)}")
-    print(f"Wrote {(ROOT / 'analysis' / 'wind_hypothesis_annual_pnl.csv').relative_to(ROOT)}")
+    print(f"Wrote {(ROOT / 'GA_analysis' / 'wind_hypothesis_annual_pnl.csv').relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
