@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generation mix backtest</title>
+<style>
+body{font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#172033;max-width:1100px;margin:2rem auto;padding:0 1.25rem}
+h1,h2{line-height:1.2}h1{margin-bottom:.25rem}h2{margin-top:2rem}
+.lede,.note{color:#475569}.callout{background:#eff6ff;border-left:4px solid #2563eb;padding:1rem 1.2rem;margin:1.5rem 0}
+.chart{margin:1.25rem 0 2rem;border:1px solid #e2e8f0;border-radius:8px;padding:.5rem;overflow-x:auto}
+svg{width:100%;height:auto;min-width:640px}.chart-title{font:600 16px system-ui;fill:#172033}.chart-subtitle{font:12px system-ui;fill:#64748b}
+.grid{stroke:#e2e8f0;stroke-width:1}.zero{stroke:#64748b;stroke-width:1.2;stroke-dasharray:5 4}.axis-line{stroke:#64748b;stroke-width:1}
+.axis{font:11px system-ui;fill:#475569}.axis-title{font:12px system-ui;fill:#334155}.legend{font:12px system-ui;fill:#334155}
+table{width:100%;border-collapse:collapse;margin:1rem 0 1.75rem;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e2e8f0;padding:.55rem .65rem;text-align:right}
+th:first-child,td:first-child{text-align:left}thead{background:#f8fafc}.small{font-size:.9rem;color:#64748b}
+</style>
+</head>
+<body>
+<h1>Wind, solar &amp; nuclear: historical visualisation &amp; gross backtest</h1>
+<p class="lede">GB market history through <strong>2026-10-02</strong>. Positions are capped at ±25 MW; P/L follows the challenge formula and is before trading costs.</p>
+<div class="callout"><strong>Bottom line:</strong> high wind and wind-plus-solar shares show the clearest association with lower DA-HH prices versus CCGT SRMC. Solar by itself is sparse, and nuclear share is not monotonic with that price gap. The specified threshold rules made £583,238 (wind), -£79,679 (solar), £575,566 (nuclear), £585,728 (wind + solar), and £510,137 (wind + solar + nuclear). Always short made £3,059,606 over the same full sample. These are illustrative gross backtests, not evidence of deployable alpha.</div>
+
+<h2>What was tested</h2>
+<ul>
+<li><strong>9am wind rule:</strong> short 25 MW for a delivery hour when mean forecast wind generation / demand across that hour is at least 30%; otherwise flat. The hourly position is applied to both half-hours and held through cashout (Y = X).</li>
+<li><strong>Solar rule:</strong> short when solar forecast is at least 0.5% of demand; otherwise flat. <strong>Nuclear rule:</strong> short when nuclear forecast is at least 20% of demand. Separate checks use wind + solar ≥30% and wind + solar + nuclear ≥45% of demand.</li>
+<li><strong>3pm revision rule:</strong> using the latest Elexon wind forecast published strictly before each UK-local 9am and 3pm cutoff, short 25 MW if the forecast rises, long 25 MW if it falls, and hold the 9am position if unchanged. The hourly signal is applied to both half-hours.</li>
+<li><strong>Combined:</strong> apply the Elexon revision rule to both the wind-only and wind-plus-solar 9am positions.</li>
+</ul>
+<p class="note">Thresholds are transparent illustrations, not optimized parameters. Shares are each forecast generation component divided by forecast demand, averaged over two half-hours to match the hourly 9am position. "Wind + solar + nuclear" is a simple total-share proxy, not a full merit-order model. SRMC evaluates the price relationship, not the position rule. P/L is 0.5 × [X × (DA-HH − DA-HR) + Y × (cashout − DA-HH)] for every half-hour.</p>
+
+<h2>Generation mix, fair-value gap, and auction repricing</h2>
+<div class="chart"><svg viewBox="0 0 900 440" role="img" aria-label="Forecast generation mix vs DA-HH price minus CCGT SRMC">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Forecast generation mix vs DA-HH price minus CCGT SRMC</text>
+<text x="88" y="43" class="chart-subtitle">Daily quintiles for wind, nuclear, and combined shares; solar split at 0.5% of demand.</text>
+<line x1="88" y1="358.0" x2="876" y2="358.0" class="grid"/>
+<text x="78" y="362.0" text-anchor="end" class="axis">-18</text>
+<line x1="88" y1="282.2" x2="876" y2="282.2" class="grid"/>
+<text x="78" y="286.2" text-anchor="end" class="axis">-9</text>
+<line x1="88" y1="206.5" x2="876" y2="206.5" class="grid"/>
+<text x="78" y="210.5" text-anchor="end" class="axis">-1</text>
+<line x1="88" y1="130.8" x2="876" y2="130.8" class="grid"/>
+<text x="78" y="134.8" text-anchor="end" class="axis">8</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">17</text>
+<line x1="88" y1="200.2" x2="876" y2="200.2" class="zero"/>
+<line x1="88" y1="55" x2="88" y2="358" class="axis-line"/>
+<line x1="88" y1="358" x2="876" y2="358" class="axis-line"/>
+<text transform="translate(18 206.5) rotate(-90)" text-anchor="middle" class="axis-title">DA-HH less SRMC (£/MWh)</text>
+<polyline points="88.0,84.0 285.0,118.3 482.0,148.9 679.0,187.8 876.0,337.1" fill="none" stroke="#2563eb" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="84.0" r="4.5" fill="#2563eb"><title>Q1: 13.43</title></circle>
+<circle cx="285.0" cy="118.3" r="4.5" fill="#2563eb"><title>Q2: 9.46</title></circle>
+<circle cx="482.0" cy="148.9" r="4.5" fill="#2563eb"><title>Q3: 5.93</title></circle>
+<circle cx="679.0" cy="187.8" r="4.5" fill="#2563eb"><title>Q4: 1.43</title></circle>
+<circle cx="876.0" cy="337.1" r="4.5" fill="#2563eb"><title>Q5: -15.82</title></circle>
+<line x1="88.0" y1="405" x2="108.0" y2="405" stroke="#2563eb" stroke-width="3"/>
+<text x="114.0" y="409" class="legend">Wind</text>
+<polyline points="88.0,164.4 876.0,284.4" fill="none" stroke="#f59e0b" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="164.4" r="4.5" fill="#f59e0b"><title>Q1: 4.14</title></circle>
+<circle cx="876.0" cy="284.4" r="4.5" fill="#f59e0b"><title>Q2: -9.73</title></circle>
+<line x1="350.6666666666667" y1="405" x2="370.6666666666667" y2="405" stroke="#f59e0b" stroke-width="3"/>
+<text x="376.6666666666667" y="409" class="legend">Solar</text>
+<polyline points="88.0,221.6 285.0,147.5 482.0,164.7 679.0,160.3 876.0,182.0" fill="none" stroke="#7c3aed" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="221.6" r="4.5" fill="#7c3aed"><title>Q1: -2.47</title></circle>
+<circle cx="285.0" cy="147.5" r="4.5" fill="#7c3aed"><title>Q2: 6.09</title></circle>
+<circle cx="482.0" cy="164.7" r="4.5" fill="#7c3aed"><title>Q3: 4.10</title></circle>
+<circle cx="679.0" cy="160.3" r="4.5" fill="#7c3aed"><title>Q4: 4.61</title></circle>
+<circle cx="876.0" cy="182.0" r="4.5" fill="#7c3aed"><title>Q5: 2.10</title></circle>
+<line x1="613.3333333333334" y1="405" x2="633.3333333333334" y2="405" stroke="#7c3aed" stroke-width="3"/>
+<text x="639.3333333333334" y="409" class="legend">Nuclear</text>
+<polyline points="88.0,83.9 285.0,118.0 482.0,148.6 679.0,189.9 876.0,335.7" fill="none" stroke="#059669" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="83.9" r="4.5" fill="#059669"><title>Q1: 13.44</title></circle>
+<circle cx="285.0" cy="118.0" r="4.5" fill="#059669"><title>Q2: 9.50</title></circle>
+<circle cx="482.0" cy="148.6" r="4.5" fill="#059669"><title>Q3: 5.96</title></circle>
+<circle cx="679.0" cy="189.9" r="4.5" fill="#059669"><title>Q4: 1.19</title></circle>
+<circle cx="876.0" cy="335.7" r="4.5" fill="#059669"><title>Q5: -15.66</title></circle>
+<line x1="88.0" y1="423" x2="108.0" y2="423" stroke="#059669" stroke-width="3"/>
+<text x="114.0" y="427" class="legend">Wind + solar</text>
+<polyline points="88.0,75.9 285.0,121.4 482.0,153.7 679.0,191.4 876.0,333.7" fill="none" stroke="#dc2626" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="75.9" r="4.5" fill="#dc2626"><title>Q1: 14.36</title></circle>
+<circle cx="285.0" cy="121.4" r="4.5" fill="#dc2626"><title>Q2: 9.11</title></circle>
+<circle cx="482.0" cy="153.7" r="4.5" fill="#dc2626"><title>Q3: 5.37</title></circle>
+<circle cx="679.0" cy="191.4" r="4.5" fill="#dc2626"><title>Q4: 1.01</title></circle>
+<circle cx="876.0" cy="333.7" r="4.5" fill="#dc2626"><title>Q5: -15.43</title></circle>
+<line x1="350.6666666666667" y1="423" x2="370.6666666666667" y2="423" stroke="#dc2626" stroke-width="3"/>
+<text x="376.6666666666667" y="427" class="legend">Wind + solar + nuclear</text>
+<text x="88.0" y="378" text-anchor="middle" class="axis">Q1</text>
+<text x="285.0" y="378" text-anchor="middle" class="axis">Q2</text>
+<text x="482.0" y="378" text-anchor="middle" class="axis">Q3</text>
+<text x="679.0" y="378" text-anchor="middle" class="axis">Q4</text>
+<text x="876.0" y="378" text-anchor="middle" class="axis">Q5</text>
+</svg></div>
+<div class="chart"><svg viewBox="0 0 900 410" role="img" aria-label="Generation mix does not sort the 9am→3pm auction spread">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Generation mix does not sort the 9am→3pm auction spread</text>
+<text x="88" y="43" class="chart-subtitle">Mean DA-HH minus DA-HR price by daily wind-share quintile.</text>
+<line x1="88" y1="328.0" x2="876" y2="328.0" class="grid"/>
+<text x="78" y="332.0" text-anchor="end" class="axis">-1</text>
+<line x1="88" y1="259.8" x2="876" y2="259.8" class="grid"/>
+<text x="78" y="263.8" text-anchor="end" class="axis">-0</text>
+<line x1="88" y1="191.5" x2="876" y2="191.5" class="grid"/>
+<text x="78" y="195.5" text-anchor="end" class="axis">-0</text>
+<line x1="88" y1="123.3" x2="876" y2="123.3" class="grid"/>
+<text x="78" y="127.3" text-anchor="end" class="axis">0</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">0</text>
+<line x1="88" y1="135.7" x2="876" y2="135.7" class="zero"/>
+<line x1="88" y1="55" x2="88" y2="328" class="axis-line"/>
+<line x1="88" y1="328" x2="876" y2="328" class="axis-line"/>
+<text transform="translate(18 191.5) rotate(-90)" text-anchor="middle" class="axis-title">DA-HH less DA-HR (£/MWh)</text>
+<polyline points="88.0,172.7 285.0,178.1 482.0,309.2 679.0,73.8 876.0,223.6" fill="none" stroke="#2563eb" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="172.7" r="4.5" fill="#2563eb"><title>Q1: -0.10</title></circle>
+<circle cx="285.0" cy="178.1" r="4.5" fill="#2563eb"><title>Q2: -0.11</title></circle>
+<circle cx="482.0" cy="309.2" r="4.5" fill="#2563eb"><title>Q3: -0.46</title></circle>
+<circle cx="679.0" cy="73.8" r="4.5" fill="#2563eb"><title>Q4: 0.16</title></circle>
+<circle cx="876.0" cy="223.6" r="4.5" fill="#2563eb"><title>Q5: -0.23</title></circle>
+<line x1="88.0" y1="375" x2="108.0" y2="375" stroke="#2563eb" stroke-width="3"/>
+<text x="114.0" y="379" class="legend">Wind share</text>
+<polyline points="88.0,179.2 285.0,182.9 482.0,300.3 679.0,96.2 876.0,198.8" fill="none" stroke="#059669" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="179.2" r="4.5" fill="#059669"><title>Q1: -0.12</title></circle>
+<circle cx="285.0" cy="182.9" r="4.5" fill="#059669"><title>Q2: -0.13</title></circle>
+<circle cx="482.0" cy="300.3" r="4.5" fill="#059669"><title>Q3: -0.44</title></circle>
+<circle cx="679.0" cy="96.2" r="4.5" fill="#059669"><title>Q4: 0.10</title></circle>
+<circle cx="876.0" cy="198.8" r="4.5" fill="#059669"><title>Q5: -0.17</title></circle>
+<line x1="350.6666666666667" y1="375" x2="370.6666666666667" y2="375" stroke="#059669" stroke-width="3"/>
+<text x="376.6666666666667" y="379" class="legend">Wind + solar</text>
+<polyline points="88.0,106.6 285.0,217.0 482.0,280.8 679.0,84.0 876.0,268.9" fill="none" stroke="#dc2626" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="106.6" r="4.5" fill="#dc2626"><title>Q1: 0.08</title></circle>
+<circle cx="285.0" cy="217.0" r="4.5" fill="#dc2626"><title>Q2: -0.22</title></circle>
+<circle cx="482.0" cy="280.8" r="4.5" fill="#dc2626"><title>Q3: -0.38</title></circle>
+<circle cx="679.0" cy="84.0" r="4.5" fill="#dc2626"><title>Q4: 0.14</title></circle>
+<circle cx="876.0" cy="268.9" r="4.5" fill="#dc2626"><title>Q5: -0.35</title></circle>
+<line x1="613.3333333333334" y1="375" x2="633.3333333333334" y2="375" stroke="#dc2626" stroke-width="3"/>
+<text x="639.3333333333334" y="379" class="legend">Wind + solar + nuclear</text>
+<text x="88.0" y="348" text-anchor="middle" class="axis">Q1</text>
+<text x="285.0" y="348" text-anchor="middle" class="axis">Q2</text>
+<text x="482.0" y="348" text-anchor="middle" class="axis">Q3</text>
+<text x="679.0" y="348" text-anchor="middle" class="axis">Q4</text>
+<text x="876.0" y="348" text-anchor="middle" class="axis">Q5</text>
+</svg></div>
+<div class="chart"><svg viewBox="0 0 900 370" role="img" aria-label="Solar threshold and the fair-value gap">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Solar threshold and the fair-value gap</text>
+<text x="88" y="43" class="chart-subtitle">Daily forecast solar generation below / above 0.5% of demand.</text>
+<line x1="88" y1="288.0" x2="876" y2="288.0" class="grid"/>
+<text x="78" y="292.0" text-anchor="end" class="axis">-11</text>
+<line x1="88" y1="229.7" x2="876" y2="229.7" class="grid"/>
+<text x="78" y="233.7" text-anchor="end" class="axis">-7</text>
+<line x1="88" y1="171.5" x2="876" y2="171.5" class="grid"/>
+<text x="78" y="175.5" text-anchor="end" class="axis">-3</text>
+<line x1="88" y1="113.2" x2="876" y2="113.2" class="grid"/>
+<text x="78" y="117.2" text-anchor="end" class="axis">1</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">5</text>
+<line x1="88" y1="131.0" x2="876" y2="131.0" class="zero"/>
+<line x1="88" y1="55" x2="88" y2="288" class="axis-line"/>
+<line x1="88" y1="288" x2="876" y2="288" class="axis-line"/>
+<text transform="translate(18 171.5) rotate(-90)" text-anchor="middle" class="axis-title">DA-HH less SRMC (£/MWh)</text>
+<polyline points="88.0,71.1 876.0,271.9" fill="none" stroke="#f59e0b" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="71.1" r="4.5" fill="#f59e0b"><title>&lt;0.5%: 4.14</title></circle>
+<circle cx="876.0" cy="271.9" r="4.5" fill="#f59e0b"><title>≥0.5%: -9.73</title></circle>
+<line x1="88.0" y1="335" x2="108.0" y2="335" stroke="#f59e0b" stroke-width="3"/>
+<text x="114.0" y="339" class="legend">DA-HH less SRMC</text>
+<text x="88.0" y="308" text-anchor="middle" class="axis">&lt;0.5%</text>
+<text x="876.0" y="308" text-anchor="middle" class="axis">≥0.5%</text>
+</svg></div>
+<table><thead><tr><th>Forecast feature</th><th>Bin</th><th>Days</th><th>Mean feature / demand</th><th>DA-HH − SRMC (£/MWh)</th><th>DA-HH below SRMC</th><th>DA-HH − DA-HR (£/MWh)</th></tr></thead><tbody><tr><td>Wind</td><td>Q1</td><td>785</td><td>4.8%</td><td>+13.43</td><td>1.5%</td><td>-0.10</td></tr><tr><td>Wind</td><td>Q2</td><td>785</td><td>11.1%</td><td>+9.46</td><td>6.6%</td><td>-0.11</td></tr><tr><td>Wind</td><td>Q3</td><td>785</td><td>17.6%</td><td>+5.93</td><td>18.6%</td><td>-0.46</td></tr><tr><td>Wind</td><td>Q4</td><td>785</td><td>25.8%</td><td>+1.43</td><td>43.3%</td><td>+0.16</td></tr><tr><td>Wind</td><td>Q5</td><td>785</td><td>39.1%</td><td>-15.82</td><td>82.2%</td><td>-0.23</td></tr><tr><td>Solar</td><td>&lt;0.5%</td><td>3,570</td><td>0.0%</td><td>+4.14</td><td>26.8%</td><td>-0.21</td></tr><tr><td>Solar</td><td>≥0.5%</td><td>355</td><td>1.1%</td><td>-9.73</td><td>66.8%</td><td>+0.47</td></tr><tr><td>Nuclear</td><td>Q1</td><td>785</td><td>11.3%</td><td>-2.47</td><td>51.2%</td><td>+0.08</td></tr><tr><td>Nuclear</td><td>Q2</td><td>785</td><td>15.0%</td><td>+6.09</td><td>29.3%</td><td>-0.35</td></tr><tr><td>Nuclear</td><td>Q3</td><td>785</td><td>17.0%</td><td>+4.10</td><td>26.9%</td><td>-0.08</td></tr><tr><td>Nuclear</td><td>Q4</td><td>785</td><td>19.1%</td><td>+4.61</td><td>24.1%</td><td>+0.06</td></tr><tr><td>Nuclear</td><td>Q5</td><td>785</td><td>22.9%</td><td>+2.10</td><td>20.8%</td><td>-0.45</td></tr><tr><td>Wind + solar</td><td>Q1</td><td>785</td><td>4.8%</td><td>+13.44</td><td>1.4%</td><td>-0.12</td></tr><tr><td>Wind + solar</td><td>Q2</td><td>785</td><td>11.1%</td><td>+9.50</td><td>6.6%</td><td>-0.13</td></tr><tr><td>Wind + solar</td><td>Q3</td><td>785</td><td>17.8%</td><td>+5.96</td><td>18.5%</td><td>-0.44</td></tr><tr><td>Wind + solar</td><td>Q4</td><td>785</td><td>26.0%</td><td>+1.19</td><td>43.6%</td><td>+0.10</td></tr><tr><td>Wind + solar</td><td>Q5</td><td>785</td><td>39.3%</td><td>-15.66</td><td>82.2%</td><td>-0.17</td></tr><tr><td>Wind + solar + nuclear</td><td>Q1</td><td>785</td><td>22.7%</td><td>+14.36</td><td>3.4%</td><td>+0.08</td></tr><tr><td>Wind + solar + nuclear</td><td>Q2</td><td>785</td><td>29.2%</td><td>+9.11</td><td>7.4%</td><td>-0.22</td></tr><tr><td>Wind + solar + nuclear</td><td>Q3</td><td>785</td><td>35.2%</td><td>+5.37</td><td>18.3%</td><td>-0.38</td></tr><tr><td>Wind + solar + nuclear</td><td>Q4</td><td>785</td><td>42.3%</td><td>+1.01</td><td>42.8%</td><td>+0.14</td></tr><tr><td>Wind + solar + nuclear</td><td>Q5</td><td>785</td><td>55.0%</td><td>-15.43</td><td>80.3%</td><td>-0.35</td></tr></tbody></table>
+<p>Matched price/forecast/SRMC coverage: 3,925 delivery days. Wind and wind-plus-solar are sorted into quintiles; nuclear and total wind + solar + nuclear are shown separately because their shares behave differently. Solar is split at 0.5% of demand because the forecast is often zero overnight. The auction-spread chart is the more direct test of the 9am position’s payoff.</p>
+
+<h2>Gross P/L: full historical sample</h2>
+<div class="chart"><svg viewBox="0 0 900 460" role="img" aria-label="Cumulative gross P/L by generation-mix signal">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Cumulative gross P/L by generation-mix signal</text>
+<text x="88" y="43" class="chart-subtitle">Daily P/L accumulated through 2 October 2026; 9am positions held to cashout.</text>
+<line x1="88" y1="378.0" x2="876" y2="378.0" class="grid"/>
+<text x="78" y="382.0" text-anchor="end" class="axis">-175,113</text>
+<line x1="88" y1="297.2" x2="876" y2="297.2" class="grid"/>
+<text x="78" y="301.2" text-anchor="end" class="axis">58,523</text>
+<line x1="88" y1="216.5" x2="876" y2="216.5" class="grid"/>
+<text x="78" y="220.5" text-anchor="end" class="axis">292,158</text>
+<line x1="88" y1="135.8" x2="876" y2="135.8" class="grid"/>
+<text x="78" y="139.8" text-anchor="end" class="axis">525,794</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">759,429</text>
+<line x1="88" y1="317.5" x2="876" y2="317.5" class="zero"/>
+<line x1="88" y1="55" x2="88" y2="378" class="axis-line"/>
+<line x1="88" y1="378" x2="876" y2="378" class="axis-line"/>
+<text transform="translate(18 216.5) rotate(-90)" text-anchor="middle" class="axis-title">Cumulative gross P/L (£)</text>
+<polyline points="88.0,317.5 94.1,317.5 100.2,317.5 106.3,317.5 112.4,317.5 118.5,317.5 124.7,317.5 130.8,317.3 136.9,317.3 143.0,317.3 149.1,317.3 155.2,317.7 161.3,317.7 167.4,317.7 173.5,317.7 179.6,317.8 185.7,317.8 191.8,316.6 198.0,316.6 204.1,316.7 210.2,316.7 216.3,314.9 222.4,315.0 228.5,310.1 234.6,311.3 240.7,312.2 246.8,315.9 252.9,312.6 259.0,313.2 265.1,311.0 271.3,313.8 277.4,311.1 283.5,308.2 289.6,306.0 295.7,308.9 301.8,305.2 307.9,301.9 314.0,302.6 320.1,299.2 326.2,300.2 332.3,298.1 338.4,301.4 344.6,302.1 350.7,304.8 356.8,302.5 362.9,302.3 369.0,300.6 375.1,297.3 381.2,299.4 387.3,307.8 393.4,301.7 399.5,301.7 405.6,304.8 411.8,297.0 417.9,300.5 424.0,302.7 430.1,299.8 436.2,299.4 442.3,294.2 448.4,296.9 454.5,294.2 460.6,291.8 466.7,296.8 472.8,300.1 478.9,304.8 485.1,305.0 491.2,303.1 497.3,304.8 503.4,303.6 509.5,305.0 515.6,310.3 521.7,273.6 527.8,271.0 533.9,238.2 540.0,153.3 546.1,169.2 552.2,158.8 558.4,148.8 564.5,152.0 570.6,146.2 576.7,117.1 582.8,147.7 588.9,149.4 595.0,185.2 601.1,229.6 607.2,213.6 613.3,217.3 619.4,195.8 625.6,190.3 631.7,202.0 637.8,192.7 643.9,185.4 650.0,162.3 656.1,204.6 662.2,200.6 668.3,202.8 674.4,206.3 680.5,199.7 686.6,204.3 692.7,189.9 698.9,179.3 705.0,160.7 711.1,162.7 717.2,139.3 723.3,144.9 729.4,148.4 735.5,152.0 741.6,141.3 747.7,133.5 753.8,115.3 759.9,112.2 766.0,103.3 772.2,106.1 778.3,89.7 784.4,87.3 790.5,91.9 796.6,79.6 802.7,99.9 808.8,103.3 814.9,111.3 821.0,126.0 827.1,124.1 833.2,134.2 839.3,143.7 845.5,148.3 851.6,133.7 857.7,127.2 863.8,144.7 869.9,115.6 876.0,115.9" fill="none" stroke="#2563eb" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="317.5" r="4.5" fill="#2563eb"><title>2016-01-31 00:00:00: 0.00</title></circle>
+<circle cx="94.1" cy="317.5" r="4.5" fill="#2563eb"><title>2016-02-29 00:00:00: 0.00</title></circle>
+<circle cx="100.2" cy="317.5" r="4.5" fill="#2563eb"><title>2016-03-31 00:00:00: 0.00</title></circle>
+<circle cx="106.3" cy="317.5" r="4.5" fill="#2563eb"><title>2016-04-30 00:00:00: 0.00</title></circle>
+<circle cx="112.4" cy="317.5" r="4.5" fill="#2563eb"><title>2016-05-31 00:00:00: 0.00</title></circle>
+<circle cx="118.5" cy="317.5" r="4.5" fill="#2563eb"><title>2016-06-30 00:00:00: 0.00</title></circle>
+<circle cx="124.7" cy="317.5" r="4.5" fill="#2563eb"><title>2016-07-31 00:00:00: 0.00</title></circle>
+<circle cx="130.8" cy="317.3" r="4.5" fill="#2563eb"><title>2016-08-31 00:00:00: 427.25</title></circle>
+<circle cx="136.9" cy="317.3" r="4.5" fill="#2563eb"><title>2016-09-30 00:00:00: 427.25</title></circle>
+<circle cx="143.0" cy="317.3" r="4.5" fill="#2563eb"><title>2016-10-31 00:00:00: 427.25</title></circle>
+<circle cx="149.1" cy="317.3" r="4.5" fill="#2563eb"><title>2016-11-30 00:00:00: 427.25</title></circle>
+<circle cx="155.2" cy="317.7" r="4.5" fill="#2563eb"><title>2016-12-31 00:00:00: -543.13</title></circle>
+<circle cx="161.3" cy="317.7" r="4.5" fill="#2563eb"><title>2017-01-31 00:00:00: -543.13</title></circle>
+<circle cx="167.4" cy="317.7" r="4.5" fill="#2563eb"><title>2017-02-28 00:00:00: -543.13</title></circle>
+<circle cx="173.5" cy="317.7" r="4.5" fill="#2563eb"><title>2017-03-31 00:00:00: -543.13</title></circle>
+<circle cx="179.6" cy="317.8" r="4.5" fill="#2563eb"><title>2017-04-30 00:00:00: -1,005.88</title></circle>
+<circle cx="185.7" cy="317.8" r="4.5" fill="#2563eb"><title>2017-05-31 00:00:00: -1,005.88</title></circle>
+<circle cx="191.8" cy="316.6" r="4.5" fill="#2563eb"><title>2017-06-30 00:00:00: 2,436.38</title></circle>
+<circle cx="198.0" cy="316.6" r="4.5" fill="#2563eb"><title>2017-07-31 00:00:00: 2,436.38</title></circle>
+<circle cx="204.1" cy="316.7" r="4.5" fill="#2563eb"><title>2017-08-31 00:00:00: 2,331.75</title></circle>
+<circle cx="210.2" cy="316.7" r="4.5" fill="#2563eb"><title>2017-09-30 00:00:00: 2,126.50</title></circle>
+<circle cx="216.3" cy="314.9" r="4.5" fill="#2563eb"><title>2017-10-31 00:00:00: 7,352.12</title></circle>
+<circle cx="222.4" cy="315.0" r="4.5" fill="#2563eb"><title>2017-11-30 00:00:00: 7,287.12</title></circle>
+<circle cx="228.5" cy="310.1" r="4.5" fill="#2563eb"><title>2017-12-31 00:00:00: 21,481.00</title></circle>
+<circle cx="234.6" cy="311.3" r="4.5" fill="#2563eb"><title>2018-01-31 00:00:00: 17,753.38</title></circle>
+<circle cx="240.7" cy="312.2" r="4.5" fill="#2563eb"><title>2018-02-28 00:00:00: 15,219.75</title></circle>
+<circle cx="246.8" cy="315.9" r="4.5" fill="#2563eb"><title>2018-03-31 00:00:00: 4,679.00</title></circle>
+<circle cx="252.9" cy="312.6" r="4.5" fill="#2563eb"><title>2018-04-30 00:00:00: 14,192.62</title></circle>
+<circle cx="259.0" cy="313.2" r="4.5" fill="#2563eb"><title>2018-05-31 00:00:00: 12,429.88</title></circle>
+<circle cx="265.1" cy="311.0" r="4.5" fill="#2563eb"><title>2018-06-30 00:00:00: 18,707.25</title></circle>
+<circle cx="271.3" cy="313.8" r="4.5" fill="#2563eb"><title>2018-07-31 00:00:00: 10,664.75</title></circle>
+<circle cx="277.4" cy="311.1" r="4.5" fill="#2563eb"><title>2018-08-31 00:00:00: 18,554.88</title></circle>
+<circle cx="283.5" cy="308.2" r="4.5" fill="#2563eb"><title>2018-09-30 00:00:00: 26,705.25</title></circle>
+<circle cx="289.6" cy="306.0" r="4.5" fill="#2563eb"><title>2018-10-31 00:00:00: 33,181.12</title></circle>
+<circle cx="295.7" cy="308.9" r="4.5" fill="#2563eb"><title>2018-11-30 00:00:00: 24,817.62</title></circle>
+<circle cx="301.8" cy="305.2" r="4.5" fill="#2563eb"><title>2018-12-31 00:00:00: 35,460.25</title></circle>
+<circle cx="307.9" cy="301.9" r="4.5" fill="#2563eb"><title>2019-01-31 00:00:00: 44,957.50</title></circle>
+<circle cx="314.0" cy="302.6" r="4.5" fill="#2563eb"><title>2019-02-28 00:00:00: 43,120.38</title></circle>
+<circle cx="320.1" cy="299.2" r="4.5" fill="#2563eb"><title>2019-03-31 00:00:00: 52,818.62</title></circle>
+<circle cx="326.2" cy="300.2" r="4.5" fill="#2563eb"><title>2019-04-30 00:00:00: 49,894.50</title></circle>
+<circle cx="332.3" cy="298.1" r="4.5" fill="#2563eb"><title>2019-05-31 00:00:00: 56,067.12</title></circle>
+<circle cx="338.4" cy="301.4" r="4.5" fill="#2563eb"><title>2019-06-30 00:00:00: 46,512.38</title></circle>
+<circle cx="344.6" cy="302.1" r="4.5" fill="#2563eb"><title>2019-07-31 00:00:00: 44,371.38</title></circle>
+<circle cx="350.7" cy="304.8" r="4.5" fill="#2563eb"><title>2019-08-31 00:00:00: 36,688.12</title></circle>
+<circle cx="356.8" cy="302.5" r="4.5" fill="#2563eb"><title>2019-09-30 00:00:00: 43,423.12</title></circle>
+<circle cx="362.9" cy="302.3" r="4.5" fill="#2563eb"><title>2019-10-31 00:00:00: 44,050.50</title></circle>
+<circle cx="369.0" cy="300.6" r="4.5" fill="#2563eb"><title>2019-11-30 00:00:00: 48,879.38</title></circle>
+<circle cx="375.1" cy="297.3" r="4.5" fill="#2563eb"><title>2019-12-31 00:00:00: 58,458.88</title></circle>
+<circle cx="381.2" cy="299.4" r="4.5" fill="#2563eb"><title>2020-01-31 00:00:00: 52,192.88</title></circle>
+<circle cx="387.3" cy="307.8" r="4.5" fill="#2563eb"><title>2020-02-29 00:00:00: 28,132.38</title></circle>
+<circle cx="393.4" cy="301.7" r="4.5" fill="#2563eb"><title>2020-03-31 00:00:00: 45,674.12</title></circle>
+<circle cx="399.5" cy="301.7" r="4.5" fill="#2563eb"><title>2020-04-30 00:00:00: 45,732.38</title></circle>
+<circle cx="405.6" cy="304.8" r="4.5" fill="#2563eb"><title>2020-05-31 00:00:00: 36,664.00</title></circle>
+<circle cx="411.8" cy="297.0" r="4.5" fill="#2563eb"><title>2020-06-30 00:00:00: 59,248.75</title></circle>
+<circle cx="417.9" cy="300.5" r="4.5" fill="#2563eb"><title>2020-07-31 00:00:00: 49,096.62</title></circle>
+<circle cx="424.0" cy="302.7" r="4.5" fill="#2563eb"><title>2020-08-31 00:00:00: 42,639.12</title></circle>
+<circle cx="430.1" cy="299.8" r="4.5" fill="#2563eb"><title>2020-09-30 00:00:00: 51,195.75</title></circle>
+<circle cx="436.2" cy="299.4" r="4.5" fill="#2563eb"><title>2020-10-31 00:00:00: 52,192.38</title></circle>
+<circle cx="442.3" cy="294.2" r="4.5" fill="#2563eb"><title>2020-11-30 00:00:00: 67,300.88</title></circle>
+<circle cx="448.4" cy="296.9" r="4.5" fill="#2563eb"><title>2020-12-31 00:00:00: 59,559.50</title></circle>
+<circle cx="454.5" cy="294.2" r="4.5" fill="#2563eb"><title>2021-01-31 00:00:00: 67,289.12</title></circle>
+<circle cx="460.6" cy="291.8" r="4.5" fill="#2563eb"><title>2021-02-28 00:00:00: 74,252.50</title></circle>
+<circle cx="466.7" cy="296.8" r="4.5" fill="#2563eb"><title>2021-03-31 00:00:00: 59,727.88</title></circle>
+<circle cx="472.8" cy="300.1" r="4.5" fill="#2563eb"><title>2021-04-30 00:00:00: 50,316.00</title></circle>
+<circle cx="478.9" cy="304.8" r="4.5" fill="#2563eb"><title>2021-05-31 00:00:00: 36,603.75</title></circle>
+<circle cx="485.1" cy="305.0" r="4.5" fill="#2563eb"><title>2021-06-30 00:00:00: 36,240.38</title></circle>
+<circle cx="491.2" cy="303.1" r="4.5" fill="#2563eb"><title>2021-07-31 00:00:00: 41,588.75</title></circle>
+<circle cx="497.3" cy="304.8" r="4.5" fill="#2563eb"><title>2021-08-31 00:00:00: 36,702.38</title></circle>
+<circle cx="503.4" cy="303.6" r="4.5" fill="#2563eb"><title>2021-09-30 00:00:00: 40,083.25</title></circle>
+<circle cx="509.5" cy="305.0" r="4.5" fill="#2563eb"><title>2021-10-31 00:00:00: 35,999.38</title></circle>
+<circle cx="515.6" cy="310.3" r="4.5" fill="#2563eb"><title>2021-11-30 00:00:00: 20,886.75</title></circle>
+<circle cx="521.7" cy="273.6" r="4.5" fill="#2563eb"><title>2021-12-31 00:00:00: 126,973.00</title></circle>
+<circle cx="527.8" cy="271.0" r="4.5" fill="#2563eb"><title>2022-01-31 00:00:00: 134,505.88</title></circle>
+<circle cx="533.9" cy="238.2" r="4.5" fill="#2563eb"><title>2022-02-28 00:00:00: 229,511.50</title></circle>
+<circle cx="540.0" cy="153.3" r="4.5" fill="#2563eb"><title>2022-03-31 00:00:00: 475,120.50</title></circle>
+<circle cx="546.1" cy="169.2" r="4.5" fill="#2563eb"><title>2022-04-30 00:00:00: 428,901.25</title></circle>
+<circle cx="552.2" cy="158.8" r="4.5" fill="#2563eb"><title>2022-05-31 00:00:00: 458,973.00</title></circle>
+<circle cx="558.4" cy="148.8" r="4.5" fill="#2563eb"><title>2022-06-30 00:00:00: 487,914.62</title></circle>
+<circle cx="564.5" cy="152.0" r="4.5" fill="#2563eb"><title>2022-07-31 00:00:00: 478,817.62</title></circle>
+<circle cx="570.6" cy="146.2" r="4.5" fill="#2563eb"><title>2022-08-31 00:00:00: 495,621.12</title></circle>
+<circle cx="576.7" cy="117.1" r="4.5" fill="#2563eb"><title>2022-09-30 00:00:00: 579,751.88</title></circle>
+<circle cx="582.8" cy="147.7" r="4.5" fill="#2563eb"><title>2022-10-31 00:00:00: 491,185.50</title></circle>
+<circle cx="588.9" cy="149.4" r="4.5" fill="#2563eb"><title>2022-11-30 00:00:00: 486,331.38</title></circle>
+<circle cx="595.0" cy="185.2" r="4.5" fill="#2563eb"><title>2022-12-31 00:00:00: 382,792.88</title></circle>
+<circle cx="601.1" cy="229.6" r="4.5" fill="#2563eb"><title>2023-01-31 00:00:00: 254,366.38</title></circle>
+<circle cx="607.2" cy="213.6" r="4.5" fill="#2563eb"><title>2023-02-28 00:00:00: 300,685.25</title></circle>
+<circle cx="613.3" cy="217.3" r="4.5" fill="#2563eb"><title>2023-03-31 00:00:00: 289,959.12</title></circle>
+<circle cx="619.4" cy="195.8" r="4.5" fill="#2563eb"><title>2023-04-30 00:00:00: 351,999.25</title></circle>
+<circle cx="625.6" cy="190.3" r="4.5" fill="#2563eb"><title>2023-05-31 00:00:00: 367,964.00</title></circle>
+<circle cx="631.7" cy="202.0" r="4.5" fill="#2563eb"><title>2023-06-30 00:00:00: 334,186.38</title></circle>
+<circle cx="637.8" cy="192.7" r="4.5" fill="#2563eb"><title>2023-07-31 00:00:00: 361,071.38</title></circle>
+<circle cx="643.9" cy="185.4" r="4.5" fill="#2563eb"><title>2023-08-31 00:00:00: 382,069.25</title></circle>
+<circle cx="650.0" cy="162.3" r="4.5" fill="#2563eb"><title>2023-09-30 00:00:00: 449,041.88</title></circle>
+<circle cx="656.1" cy="204.6" r="4.5" fill="#2563eb"><title>2023-10-31 00:00:00: 326,677.12</title></circle>
+<circle cx="662.2" cy="200.6" r="4.5" fill="#2563eb"><title>2023-11-30 00:00:00: 338,142.75</title></circle>
+<circle cx="668.3" cy="202.8" r="4.5" fill="#2563eb"><title>2023-12-31 00:00:00: 331,752.38</title></circle>
+<circle cx="674.4" cy="206.3" r="4.5" fill="#2563eb"><title>2024-01-31 00:00:00: 321,613.50</title></circle>
+<circle cx="680.5" cy="199.7" r="4.5" fill="#2563eb"><title>2024-02-29 00:00:00: 340,674.75</title></circle>
+<circle cx="686.6" cy="204.3" r="4.5" fill="#2563eb"><title>2024-03-31 00:00:00: 327,524.12</title></circle>
+<circle cx="692.7" cy="189.9" r="4.5" fill="#2563eb"><title>2024-04-30 00:00:00: 369,251.75</title></circle>
+<circle cx="698.9" cy="179.3" r="4.5" fill="#2563eb"><title>2024-05-31 00:00:00: 399,770.38</title></circle>
+<circle cx="705.0" cy="160.7" r="4.5" fill="#2563eb"><title>2024-06-30 00:00:00: 453,728.00</title></circle>
+<circle cx="711.1" cy="162.7" r="4.5" fill="#2563eb"><title>2024-07-31 00:00:00: 447,860.75</title></circle>
+<circle cx="717.2" cy="139.3" r="4.5" fill="#2563eb"><title>2024-08-31 00:00:00: 515,666.75</title></circle>
+<circle cx="723.3" cy="144.9" r="4.5" fill="#2563eb"><title>2024-09-30 00:00:00: 499,386.50</title></circle>
+<circle cx="729.4" cy="148.4" r="4.5" fill="#2563eb"><title>2024-10-31 00:00:00: 489,117.00</title></circle>
+<circle cx="735.5" cy="152.0" r="4.5" fill="#2563eb"><title>2024-11-30 00:00:00: 478,847.75</title></circle>
+<circle cx="741.6" cy="141.3" r="4.5" fill="#2563eb"><title>2024-12-31 00:00:00: 509,633.12</title></circle>
+<circle cx="747.7" cy="133.5" r="4.5" fill="#2563eb"><title>2025-01-31 00:00:00: 532,368.25</title></circle>
+<circle cx="753.8" cy="115.3" r="4.5" fill="#2563eb"><title>2025-02-28 00:00:00: 585,019.25</title></circle>
+<circle cx="759.9" cy="112.2" r="4.5" fill="#2563eb"><title>2025-03-31 00:00:00: 593,996.50</title></circle>
+<circle cx="766.0" cy="103.3" r="4.5" fill="#2563eb"><title>2025-04-30 00:00:00: 619,572.12</title></circle>
+<circle cx="772.2" cy="106.1" r="4.5" fill="#2563eb"><title>2025-05-31 00:00:00: 611,688.62</title></circle>
+<circle cx="778.3" cy="89.7" r="4.5" fill="#2563eb"><title>2025-06-30 00:00:00: 659,106.00</title></circle>
+<circle cx="784.4" cy="87.3" r="4.5" fill="#2563eb"><title>2025-07-31 00:00:00: 666,072.12</title></circle>
+<circle cx="790.5" cy="91.9" r="4.5" fill="#2563eb"><title>2025-08-31 00:00:00: 652,605.50</title></circle>
+<circle cx="796.6" cy="79.6" r="4.5" fill="#2563eb"><title>2025-09-30 00:00:00: 688,146.75</title></circle>
+<circle cx="802.7" cy="99.9" r="4.5" fill="#2563eb"><title>2025-10-31 00:00:00: 629,527.00</title></circle>
+<circle cx="808.8" cy="103.3" r="4.5" fill="#2563eb"><title>2025-11-30 00:00:00: 619,578.75</title></circle>
+<circle cx="814.9" cy="111.3" r="4.5" fill="#2563eb"><title>2025-12-31 00:00:00: 596,532.62</title></circle>
+<circle cx="821.0" cy="126.0" r="4.5" fill="#2563eb"><title>2026-01-31 00:00:00: 553,931.00</title></circle>
+<circle cx="827.1" cy="124.1" r="4.5" fill="#2563eb"><title>2026-02-28 00:00:00: 559,456.00</title></circle>
+<circle cx="833.2" cy="134.2" r="4.5" fill="#2563eb"><title>2026-03-31 00:00:00: 530,297.38</title></circle>
+<circle cx="839.3" cy="143.7" r="4.5" fill="#2563eb"><title>2026-04-30 00:00:00: 502,717.62</title></circle>
+<circle cx="845.5" cy="148.3" r="4.5" fill="#2563eb"><title>2026-05-31 00:00:00: 489,602.00</title></circle>
+<circle cx="851.6" cy="133.7" r="4.5" fill="#2563eb"><title>2026-06-30 00:00:00: 531,796.38</title></circle>
+<circle cx="857.7" cy="127.2" r="4.5" fill="#2563eb"><title>2026-07-31 00:00:00: 550,459.88</title></circle>
+<circle cx="863.8" cy="144.7" r="4.5" fill="#2563eb"><title>2026-08-31 00:00:00: 499,973.25</title></circle>
+<circle cx="869.9" cy="115.6" r="4.5" fill="#2563eb"><title>2026-09-30 00:00:00: 584,079.75</title></circle>
+<circle cx="876.0" cy="115.9" r="4.5" fill="#2563eb"><title>2026-10-31 00:00:00: 583,238.50</title></circle>
+<line x1="88.0" y1="425" x2="108.0" y2="425" stroke="#2563eb" stroke-width="3"/>
+<text x="114.0" y="429" class="legend">Wind ≥30%</text>
+<polyline points="88.0,317.5 94.1,317.5 100.2,317.5 106.3,317.5 112.4,317.5 118.5,317.5 124.7,317.5 130.8,317.5 136.9,317.5 143.0,317.5 149.1,317.5 155.2,317.5 161.3,317.5 167.4,317.5 173.5,317.5 179.6,317.5 185.7,317.5 191.8,317.5 198.0,317.5 204.1,317.5 210.2,317.5 216.3,317.5 222.4,317.5 228.5,317.5 234.6,317.5 240.7,317.5 246.8,317.5 252.9,317.5 259.0,317.5 265.1,317.5 271.3,317.5 277.4,317.5 283.5,317.5 289.6,317.5 295.7,317.5 301.8,317.5 307.9,317.5 314.0,317.5 320.1,317.5 326.2,317.5 332.3,317.5 338.4,317.5 344.6,317.5 350.7,317.5 356.8,317.5 362.9,317.5 369.0,317.5 375.1,317.5 381.2,317.5 387.3,317.5 393.4,317.5 399.5,317.5 405.6,317.5 411.8,317.5 417.9,317.5 424.0,317.5 430.1,317.5 436.2,317.5 442.3,317.5 448.4,317.5 454.5,317.5 460.6,317.5 466.7,317.5 472.8,317.5 478.9,317.5 485.1,317.5 491.2,317.5 497.3,317.5 503.4,317.5 509.5,317.5 515.6,317.5 521.7,317.5 527.8,317.5 533.9,317.5 540.0,317.5 546.1,317.5 552.2,317.5 558.4,317.5 564.5,317.5 570.6,317.5 576.7,317.5 582.8,317.5 588.9,317.5 595.0,317.5 601.1,317.5 607.2,317.5 613.3,317.5 619.4,317.5 625.6,317.5 631.7,317.5 637.8,319.7 643.9,320.6 650.0,318.8 656.1,322.5 662.2,322.5 668.3,322.1 674.4,322.1 680.5,322.1 686.6,322.1 692.7,322.1 698.9,320.1 705.0,316.5 711.1,318.7 717.2,314.9 723.3,325.3 729.4,316.9 735.5,317.1 741.6,314.3 747.7,317.1 753.8,307.6 759.9,311.4 766.0,312.0 772.2,312.1 778.3,317.7 784.4,316.6 790.5,305.4 796.6,295.3 802.7,313.0 808.8,301.0 814.9,306.1 821.0,328.7 827.1,330.7 833.2,331.0 839.3,340.4 845.5,334.5 851.6,332.6 857.7,339.0 863.8,355.7 869.9,347.4 876.0,345.0" fill="none" stroke="#f59e0b" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-01-31 00:00:00: 0.00</title></circle>
+<circle cx="94.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-02-29 00:00:00: 0.00</title></circle>
+<circle cx="100.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-03-31 00:00:00: 0.00</title></circle>
+<circle cx="106.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-04-30 00:00:00: 0.00</title></circle>
+<circle cx="112.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-05-31 00:00:00: 0.00</title></circle>
+<circle cx="118.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-06-30 00:00:00: 0.00</title></circle>
+<circle cx="124.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-07-31 00:00:00: 0.00</title></circle>
+<circle cx="130.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-08-31 00:00:00: 0.00</title></circle>
+<circle cx="136.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-09-30 00:00:00: 0.00</title></circle>
+<circle cx="143.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-10-31 00:00:00: 0.00</title></circle>
+<circle cx="149.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-11-30 00:00:00: 0.00</title></circle>
+<circle cx="155.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2016-12-31 00:00:00: 0.00</title></circle>
+<circle cx="161.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-01-31 00:00:00: 0.00</title></circle>
+<circle cx="167.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-02-28 00:00:00: 0.00</title></circle>
+<circle cx="173.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-03-31 00:00:00: 0.00</title></circle>
+<circle cx="179.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-04-30 00:00:00: 0.00</title></circle>
+<circle cx="185.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-05-31 00:00:00: 0.00</title></circle>
+<circle cx="191.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-06-30 00:00:00: 0.00</title></circle>
+<circle cx="198.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-07-31 00:00:00: 0.00</title></circle>
+<circle cx="204.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-08-31 00:00:00: 0.00</title></circle>
+<circle cx="210.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-09-30 00:00:00: 0.00</title></circle>
+<circle cx="216.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-10-31 00:00:00: 0.00</title></circle>
+<circle cx="222.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-11-30 00:00:00: 0.00</title></circle>
+<circle cx="228.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2017-12-31 00:00:00: 0.00</title></circle>
+<circle cx="234.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-01-31 00:00:00: 0.00</title></circle>
+<circle cx="240.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-02-28 00:00:00: 0.00</title></circle>
+<circle cx="246.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-03-31 00:00:00: 0.00</title></circle>
+<circle cx="252.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-04-30 00:00:00: 0.00</title></circle>
+<circle cx="259.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-05-31 00:00:00: 0.00</title></circle>
+<circle cx="265.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-06-30 00:00:00: 0.00</title></circle>
+<circle cx="271.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-07-31 00:00:00: 0.00</title></circle>
+<circle cx="277.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-08-31 00:00:00: 0.00</title></circle>
+<circle cx="283.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-09-30 00:00:00: 0.00</title></circle>
+<circle cx="289.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-10-31 00:00:00: 0.00</title></circle>
+<circle cx="295.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-11-30 00:00:00: 0.00</title></circle>
+<circle cx="301.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2018-12-31 00:00:00: 0.00</title></circle>
+<circle cx="307.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-01-31 00:00:00: 0.00</title></circle>
+<circle cx="314.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-02-28 00:00:00: 0.00</title></circle>
+<circle cx="320.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-03-31 00:00:00: 0.00</title></circle>
+<circle cx="326.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-04-30 00:00:00: 0.00</title></circle>
+<circle cx="332.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-05-31 00:00:00: 0.00</title></circle>
+<circle cx="338.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-06-30 00:00:00: 0.00</title></circle>
+<circle cx="344.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-07-31 00:00:00: 0.00</title></circle>
+<circle cx="350.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-08-31 00:00:00: 0.00</title></circle>
+<circle cx="356.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-09-30 00:00:00: 0.00</title></circle>
+<circle cx="362.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-10-31 00:00:00: 0.00</title></circle>
+<circle cx="369.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-11-30 00:00:00: 0.00</title></circle>
+<circle cx="375.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2019-12-31 00:00:00: 0.00</title></circle>
+<circle cx="381.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-01-31 00:00:00: 0.00</title></circle>
+<circle cx="387.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-02-29 00:00:00: 0.00</title></circle>
+<circle cx="393.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-03-31 00:00:00: 0.00</title></circle>
+<circle cx="399.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-04-30 00:00:00: 0.00</title></circle>
+<circle cx="405.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-05-31 00:00:00: 0.00</title></circle>
+<circle cx="411.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-06-30 00:00:00: 0.00</title></circle>
+<circle cx="417.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-07-31 00:00:00: 0.00</title></circle>
+<circle cx="424.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-08-31 00:00:00: 0.00</title></circle>
+<circle cx="430.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-09-30 00:00:00: 0.00</title></circle>
+<circle cx="436.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-10-31 00:00:00: 0.00</title></circle>
+<circle cx="442.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-11-30 00:00:00: 0.00</title></circle>
+<circle cx="448.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2020-12-31 00:00:00: 0.00</title></circle>
+<circle cx="454.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-01-31 00:00:00: 0.00</title></circle>
+<circle cx="460.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-02-28 00:00:00: 0.00</title></circle>
+<circle cx="466.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-03-31 00:00:00: 0.00</title></circle>
+<circle cx="472.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-04-30 00:00:00: 0.00</title></circle>
+<circle cx="478.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-05-31 00:00:00: 0.00</title></circle>
+<circle cx="485.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-06-30 00:00:00: 0.00</title></circle>
+<circle cx="491.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-07-31 00:00:00: 0.00</title></circle>
+<circle cx="497.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-08-31 00:00:00: 0.00</title></circle>
+<circle cx="503.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-09-30 00:00:00: 0.00</title></circle>
+<circle cx="509.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-10-31 00:00:00: 0.00</title></circle>
+<circle cx="515.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-11-30 00:00:00: 0.00</title></circle>
+<circle cx="521.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2021-12-31 00:00:00: 0.00</title></circle>
+<circle cx="527.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-01-31 00:00:00: 0.00</title></circle>
+<circle cx="533.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-02-28 00:00:00: 0.00</title></circle>
+<circle cx="540.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-03-31 00:00:00: 0.00</title></circle>
+<circle cx="546.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-04-30 00:00:00: 0.00</title></circle>
+<circle cx="552.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-05-31 00:00:00: 0.00</title></circle>
+<circle cx="558.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-06-30 00:00:00: 0.00</title></circle>
+<circle cx="564.5" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-07-31 00:00:00: 0.00</title></circle>
+<circle cx="570.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-08-31 00:00:00: 0.00</title></circle>
+<circle cx="576.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-09-30 00:00:00: 0.00</title></circle>
+<circle cx="582.8" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-10-31 00:00:00: 0.00</title></circle>
+<circle cx="588.9" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-11-30 00:00:00: 0.00</title></circle>
+<circle cx="595.0" cy="317.5" r="4.5" fill="#f59e0b"><title>2022-12-31 00:00:00: 0.00</title></circle>
+<circle cx="601.1" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-01-31 00:00:00: 0.00</title></circle>
+<circle cx="607.2" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-02-28 00:00:00: 0.00</title></circle>
+<circle cx="613.3" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-03-31 00:00:00: 0.00</title></circle>
+<circle cx="619.4" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-04-30 00:00:00: 0.00</title></circle>
+<circle cx="625.6" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-05-31 00:00:00: 0.00</title></circle>
+<circle cx="631.7" cy="317.5" r="4.5" fill="#f59e0b"><title>2023-06-30 00:00:00: 0.00</title></circle>
+<circle cx="637.8" cy="319.7" r="4.5" fill="#f59e0b"><title>2023-07-31 00:00:00: -6,547.38</title></circle>
+<circle cx="643.9" cy="320.6" r="4.5" fill="#f59e0b"><title>2023-08-31 00:00:00: -8,962.75</title></circle>
+<circle cx="650.0" cy="318.8" r="4.5" fill="#f59e0b"><title>2023-09-30 00:00:00: -3,899.62</title></circle>
+<circle cx="656.1" cy="322.5" r="4.5" fill="#f59e0b"><title>2023-10-31 00:00:00: -14,421.88</title></circle>
+<circle cx="662.2" cy="322.5" r="4.5" fill="#f59e0b"><title>2023-11-30 00:00:00: -14,421.88</title></circle>
+<circle cx="668.3" cy="322.1" r="4.5" fill="#f59e0b"><title>2023-12-31 00:00:00: -13,428.12</title></circle>
+<circle cx="674.4" cy="322.1" r="4.5" fill="#f59e0b"><title>2024-01-31 00:00:00: -13,428.12</title></circle>
+<circle cx="680.5" cy="322.1" r="4.5" fill="#f59e0b"><title>2024-02-29 00:00:00: -13,428.12</title></circle>
+<circle cx="686.6" cy="322.1" r="4.5" fill="#f59e0b"><title>2024-03-31 00:00:00: -13,428.12</title></circle>
+<circle cx="692.7" cy="322.1" r="4.5" fill="#f59e0b"><title>2024-04-30 00:00:00: -13,428.12</title></circle>
+<circle cx="698.9" cy="320.1" r="4.5" fill="#f59e0b"><title>2024-05-31 00:00:00: -7,619.00</title></circle>
+<circle cx="705.0" cy="316.5" r="4.5" fill="#f59e0b"><title>2024-06-30 00:00:00: 2,967.25</title></circle>
+<circle cx="711.1" cy="318.7" r="4.5" fill="#f59e0b"><title>2024-07-31 00:00:00: -3,531.00</title></circle>
+<circle cx="717.2" cy="314.9" r="4.5" fill="#f59e0b"><title>2024-08-31 00:00:00: 7,417.63</title></circle>
+<circle cx="723.3" cy="325.3" r="4.5" fill="#f59e0b"><title>2024-09-30 00:00:00: -22,501.62</title></circle>
+<circle cx="729.4" cy="316.9" r="4.5" fill="#f59e0b"><title>2024-10-31 00:00:00: 1,709.75</title></circle>
+<circle cx="735.5" cy="317.1" r="4.5" fill="#f59e0b"><title>2024-11-30 00:00:00: 1,089.50</title></circle>
+<circle cx="741.6" cy="314.3" r="4.5" fill="#f59e0b"><title>2024-12-31 00:00:00: 9,238.75</title></circle>
+<circle cx="747.7" cy="317.1" r="4.5" fill="#f59e0b"><title>2025-01-31 00:00:00: 1,000.50</title></circle>
+<circle cx="753.8" cy="307.6" r="4.5" fill="#f59e0b"><title>2025-02-28 00:00:00: 28,556.25</title></circle>
+<circle cx="759.9" cy="311.4" r="4.5" fill="#f59e0b"><title>2025-03-31 00:00:00: 17,599.13</title></circle>
+<circle cx="766.0" cy="312.0" r="4.5" fill="#f59e0b"><title>2025-04-30 00:00:00: 15,967.88</title></circle>
+<circle cx="772.2" cy="312.1" r="4.5" fill="#f59e0b"><title>2025-05-31 00:00:00: 15,658.75</title></circle>
+<circle cx="778.3" cy="317.7" r="4.5" fill="#f59e0b"><title>2025-06-30 00:00:00: -689.62</title></circle>
+<circle cx="784.4" cy="316.6" r="4.5" fill="#f59e0b"><title>2025-07-31 00:00:00: 2,400.63</title></circle>
+<circle cx="790.5" cy="305.4" r="4.5" fill="#f59e0b"><title>2025-08-31 00:00:00: 34,998.75</title></circle>
+<circle cx="796.6" cy="295.3" r="4.5" fill="#f59e0b"><title>2025-09-30 00:00:00: 64,092.75</title></circle>
+<circle cx="802.7" cy="313.0" r="4.5" fill="#f59e0b"><title>2025-10-31 00:00:00: 12,943.75</title></circle>
+<circle cx="808.8" cy="301.0" r="4.5" fill="#f59e0b"><title>2025-11-30 00:00:00: 47,647.88</title></circle>
+<circle cx="814.9" cy="306.1" r="4.5" fill="#f59e0b"><title>2025-12-31 00:00:00: 33,015.75</title></circle>
+<circle cx="821.0" cy="328.7" r="4.5" fill="#f59e0b"><title>2026-01-31 00:00:00: -32,467.25</title></circle>
+<circle cx="827.1" cy="330.7" r="4.5" fill="#f59e0b"><title>2026-02-28 00:00:00: -38,263.00</title></circle>
+<circle cx="833.2" cy="331.0" r="4.5" fill="#f59e0b"><title>2026-03-31 00:00:00: -38,983.75</title></circle>
+<circle cx="839.3" cy="340.4" r="4.5" fill="#f59e0b"><title>2026-04-30 00:00:00: -66,193.75</title></circle>
+<circle cx="845.5" cy="334.5" r="4.5" fill="#f59e0b"><title>2026-05-31 00:00:00: -49,112.38</title></circle>
+<circle cx="851.6" cy="332.6" r="4.5" fill="#f59e0b"><title>2026-06-30 00:00:00: -43,772.25</title></circle>
+<circle cx="857.7" cy="339.0" r="4.5" fill="#f59e0b"><title>2026-07-31 00:00:00: -62,289.12</title></circle>
+<circle cx="863.8" cy="355.7" r="4.5" fill="#f59e0b"><title>2026-08-31 00:00:00: -110,661.50</title></circle>
+<circle cx="869.9" cy="347.4" r="4.5" fill="#f59e0b"><title>2026-09-30 00:00:00: -86,562.62</title></circle>
+<circle cx="876.0" cy="345.0" r="4.5" fill="#f59e0b"><title>2026-10-31 00:00:00: -79,679.25</title></circle>
+<line x1="350.6666666666667" y1="425" x2="370.6666666666667" y2="425" stroke="#f59e0b" stroke-width="3"/>
+<text x="376.6666666666667" y="429" class="legend">Solar ≥0.5%</text>
+<polyline points="88.0,323.0 94.1,326.1 100.2,318.8 106.3,326.0 112.4,317.8 118.5,324.5 124.7,317.5 130.8,304.9 136.9,308.3 143.0,297.5 149.1,303.3 155.2,298.4 161.3,296.9 167.4,286.2 173.5,282.5 179.6,273.4 185.7,289.1 191.8,265.3 198.0,257.0 204.1,244.8 210.2,247.8 216.3,240.1 222.4,242.9 228.5,240.3 234.6,243.6 240.7,249.3 246.8,270.2 252.9,268.3 259.0,258.4 265.1,251.7 271.3,250.1 277.4,232.3 283.5,227.2 289.6,228.3 295.7,230.2 301.8,225.1 307.9,223.9 314.0,226.4 320.1,224.2 326.2,224.9 332.3,222.1 338.4,224.8 344.6,223.5 350.7,226.1 356.8,221.2 362.9,225.4 369.0,222.4 375.1,220.1 381.2,222.2 387.3,223.4 393.4,223.4 399.5,224.8 405.6,230.4 411.8,228.5 417.9,229.3 424.0,231.1 430.1,229.9 436.2,234.3 442.3,231.0 448.4,232.3 454.5,232.7 460.6,232.7 466.7,234.0 472.8,231.3 478.9,234.9 485.1,230.2 491.2,235.1 497.3,237.3 503.4,242.2 509.5,256.4 515.6,263.0 521.7,233.8 527.8,215.8 533.9,205.4 540.0,181.8 546.1,174.3 552.2,172.5 558.4,180.3 564.5,160.0 570.6,141.1 576.7,131.6 582.8,146.4 588.9,143.5 595.0,166.4 601.1,161.2 607.2,156.9 613.3,156.9 619.4,152.2 625.6,136.6 631.7,147.5 637.8,145.1 643.9,135.0 650.0,127.7 656.1,145.7 662.2,145.8 668.3,145.0 674.4,147.9 680.5,148.0 686.6,148.8 692.7,142.7 698.9,133.2 705.0,130.1 711.1,129.2 717.2,117.0 723.3,121.7 729.4,126.2 735.5,123.5 741.6,122.8 747.7,123.6 753.8,123.6 759.9,123.6 766.0,121.8 772.2,121.3 778.3,114.5 784.4,117.4 790.5,117.4 796.6,117.4 802.7,117.4 808.8,117.4 814.9,117.4 821.0,117.4 827.1,117.4 833.2,117.4 839.3,113.5 845.5,113.3 851.6,113.3 857.7,113.3 863.8,116.8 869.9,118.5 876.0,118.5" fill="none" stroke="#7c3aed" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="323.0" r="4.5" fill="#7c3aed"><title>2016-01-31 00:00:00: -16,003.75</title></circle>
+<circle cx="94.1" cy="326.1" r="4.5" fill="#7c3aed"><title>2016-02-29 00:00:00: -24,856.62</title></circle>
+<circle cx="100.2" cy="318.8" r="4.5" fill="#7c3aed"><title>2016-03-31 00:00:00: -3,932.38</title></circle>
+<circle cx="106.3" cy="326.0" r="4.5" fill="#7c3aed"><title>2016-04-30 00:00:00: -24,750.12</title></circle>
+<circle cx="112.4" cy="317.8" r="4.5" fill="#7c3aed"><title>2016-05-31 00:00:00: -901.38</title></circle>
+<circle cx="118.5" cy="324.5" r="4.5" fill="#7c3aed"><title>2016-06-30 00:00:00: -20,260.25</title></circle>
+<circle cx="124.7" cy="317.5" r="4.5" fill="#7c3aed"><title>2016-07-31 00:00:00: 26.50</title></circle>
+<circle cx="130.8" cy="304.9" r="4.5" fill="#7c3aed"><title>2016-08-31 00:00:00: 36,344.12</title></circle>
+<circle cx="136.9" cy="308.3" r="4.5" fill="#7c3aed"><title>2016-09-30 00:00:00: 26,644.88</title></circle>
+<circle cx="143.0" cy="297.5" r="4.5" fill="#7c3aed"><title>2016-10-31 00:00:00: 57,865.62</title></circle>
+<circle cx="149.1" cy="303.3" r="4.5" fill="#7c3aed"><title>2016-11-30 00:00:00: 41,020.88</title></circle>
+<circle cx="155.2" cy="298.4" r="4.5" fill="#7c3aed"><title>2016-12-31 00:00:00: 55,256.38</title></circle>
+<circle cx="161.3" cy="296.9" r="4.5" fill="#7c3aed"><title>2017-01-31 00:00:00: 59,579.12</title></circle>
+<circle cx="167.4" cy="286.2" r="4.5" fill="#7c3aed"><title>2017-02-28 00:00:00: 90,473.88</title></circle>
+<circle cx="173.5" cy="282.5" r="4.5" fill="#7c3aed"><title>2017-03-31 00:00:00: 101,078.62</title></circle>
+<circle cx="179.6" cy="273.4" r="4.5" fill="#7c3aed"><title>2017-04-30 00:00:00: 127,437.00</title></circle>
+<circle cx="185.7" cy="289.1" r="4.5" fill="#7c3aed"><title>2017-05-31 00:00:00: 82,072.62</title></circle>
+<circle cx="191.8" cy="265.3" r="4.5" fill="#7c3aed"><title>2017-06-30 00:00:00: 151,106.00</title></circle>
+<circle cx="198.0" cy="257.0" r="4.5" fill="#7c3aed"><title>2017-07-31 00:00:00: 174,999.88</title></circle>
+<circle cx="204.1" cy="244.8" r="4.5" fill="#7c3aed"><title>2017-08-31 00:00:00: 210,321.75</title></circle>
+<circle cx="210.2" cy="247.8" r="4.5" fill="#7c3aed"><title>2017-09-30 00:00:00: 201,689.50</title></circle>
+<circle cx="216.3" cy="240.1" r="4.5" fill="#7c3aed"><title>2017-10-31 00:00:00: 223,947.75</title></circle>
+<circle cx="222.4" cy="242.9" r="4.5" fill="#7c3aed"><title>2017-11-30 00:00:00: 215,911.88</title></circle>
+<circle cx="228.5" cy="240.3" r="4.5" fill="#7c3aed"><title>2017-12-31 00:00:00: 223,366.38</title></circle>
+<circle cx="234.6" cy="243.6" r="4.5" fill="#7c3aed"><title>2018-01-31 00:00:00: 213,687.88</title></circle>
+<circle cx="240.7" cy="249.3" r="4.5" fill="#7c3aed"><title>2018-02-28 00:00:00: 197,125.75</title></circle>
+<circle cx="246.8" cy="270.2" r="4.5" fill="#7c3aed"><title>2018-03-31 00:00:00: 136,915.25</title></circle>
+<circle cx="252.9" cy="268.3" r="4.5" fill="#7c3aed"><title>2018-04-30 00:00:00: 142,353.38</title></circle>
+<circle cx="259.0" cy="258.4" r="4.5" fill="#7c3aed"><title>2018-05-31 00:00:00: 170,881.12</title></circle>
+<circle cx="265.1" cy="251.7" r="4.5" fill="#7c3aed"><title>2018-06-30 00:00:00: 190,334.38</title></circle>
+<circle cx="271.3" cy="250.1" r="4.5" fill="#7c3aed"><title>2018-07-31 00:00:00: 194,927.38</title></circle>
+<circle cx="277.4" cy="232.3" r="4.5" fill="#7c3aed"><title>2018-08-31 00:00:00: 246,561.75</title></circle>
+<circle cx="283.5" cy="227.2" r="4.5" fill="#7c3aed"><title>2018-09-30 00:00:00: 261,135.62</title></circle>
+<circle cx="289.6" cy="228.3" r="4.5" fill="#7c3aed"><title>2018-10-31 00:00:00: 257,873.50</title></circle>
+<circle cx="295.7" cy="230.2" r="4.5" fill="#7c3aed"><title>2018-11-30 00:00:00: 252,657.00</title></circle>
+<circle cx="301.8" cy="225.1" r="4.5" fill="#7c3aed"><title>2018-12-31 00:00:00: 267,194.75</title></circle>
+<circle cx="307.9" cy="223.9" r="4.5" fill="#7c3aed"><title>2019-01-31 00:00:00: 270,879.88</title></circle>
+<circle cx="314.0" cy="226.4" r="4.5" fill="#7c3aed"><title>2019-02-28 00:00:00: 263,436.50</title></circle>
+<circle cx="320.1" cy="224.2" r="4.5" fill="#7c3aed"><title>2019-03-31 00:00:00: 269,876.88</title></circle>
+<circle cx="326.2" cy="224.9" r="4.5" fill="#7c3aed"><title>2019-04-30 00:00:00: 267,986.62</title></circle>
+<circle cx="332.3" cy="222.1" r="4.5" fill="#7c3aed"><title>2019-05-31 00:00:00: 276,049.62</title></circle>
+<circle cx="338.4" cy="224.8" r="4.5" fill="#7c3aed"><title>2019-06-30 00:00:00: 268,124.50</title></circle>
+<circle cx="344.6" cy="223.5" r="4.5" fill="#7c3aed"><title>2019-07-31 00:00:00: 271,946.12</title></circle>
+<circle cx="350.7" cy="226.1" r="4.5" fill="#7c3aed"><title>2019-08-31 00:00:00: 264,495.62</title></circle>
+<circle cx="356.8" cy="221.2" r="4.5" fill="#7c3aed"><title>2019-09-30 00:00:00: 278,615.25</title></circle>
+<circle cx="362.9" cy="225.4" r="4.5" fill="#7c3aed"><title>2019-10-31 00:00:00: 266,275.12</title></circle>
+<circle cx="369.0" cy="222.4" r="4.5" fill="#7c3aed"><title>2019-11-30 00:00:00: 274,943.00</title></circle>
+<circle cx="375.1" cy="220.1" r="4.5" fill="#7c3aed"><title>2019-12-31 00:00:00: 281,854.12</title></circle>
+<circle cx="381.2" cy="222.2" r="4.5" fill="#7c3aed"><title>2020-01-31 00:00:00: 275,775.62</title></circle>
+<circle cx="387.3" cy="223.4" r="4.5" fill="#7c3aed"><title>2020-02-29 00:00:00: 272,294.88</title></circle>
+<circle cx="393.4" cy="223.4" r="4.5" fill="#7c3aed"><title>2020-03-31 00:00:00: 272,294.88</title></circle>
+<circle cx="399.5" cy="224.8" r="4.5" fill="#7c3aed"><title>2020-04-30 00:00:00: 268,100.88</title></circle>
+<circle cx="405.6" cy="230.4" r="4.5" fill="#7c3aed"><title>2020-05-31 00:00:00: 252,065.88</title></circle>
+<circle cx="411.8" cy="228.5" r="4.5" fill="#7c3aed"><title>2020-06-30 00:00:00: 257,543.00</title></circle>
+<circle cx="417.9" cy="229.3" r="4.5" fill="#7c3aed"><title>2020-07-31 00:00:00: 255,039.25</title></circle>
+<circle cx="424.0" cy="231.1" r="4.5" fill="#7c3aed"><title>2020-08-31 00:00:00: 250,017.75</title></circle>
+<circle cx="430.1" cy="229.9" r="4.5" fill="#7c3aed"><title>2020-09-30 00:00:00: 253,390.00</title></circle>
+<circle cx="436.2" cy="234.3" r="4.5" fill="#7c3aed"><title>2020-10-31 00:00:00: 240,762.62</title></circle>
+<circle cx="442.3" cy="231.0" r="4.5" fill="#7c3aed"><title>2020-11-30 00:00:00: 250,151.00</title></circle>
+<circle cx="448.4" cy="232.3" r="4.5" fill="#7c3aed"><title>2020-12-31 00:00:00: 246,521.00</title></circle>
+<circle cx="454.5" cy="232.7" r="4.5" fill="#7c3aed"><title>2021-01-31 00:00:00: 245,280.75</title></circle>
+<circle cx="460.6" cy="232.7" r="4.5" fill="#7c3aed"><title>2021-02-28 00:00:00: 245,280.75</title></circle>
+<circle cx="466.7" cy="234.0" r="4.5" fill="#7c3aed"><title>2021-03-31 00:00:00: 241,607.62</title></circle>
+<circle cx="472.8" cy="231.3" r="4.5" fill="#7c3aed"><title>2021-04-30 00:00:00: 249,286.38</title></circle>
+<circle cx="478.9" cy="234.9" r="4.5" fill="#7c3aed"><title>2021-05-31 00:00:00: 238,833.50</title></circle>
+<circle cx="485.1" cy="230.2" r="4.5" fill="#7c3aed"><title>2021-06-30 00:00:00: 252,419.25</title></circle>
+<circle cx="491.2" cy="235.1" r="4.5" fill="#7c3aed"><title>2021-07-31 00:00:00: 238,221.25</title></circle>
+<circle cx="497.3" cy="237.3" r="4.5" fill="#7c3aed"><title>2021-08-31 00:00:00: 231,861.75</title></circle>
+<circle cx="503.4" cy="242.2" r="4.5" fill="#7c3aed"><title>2021-09-30 00:00:00: 217,786.25</title></circle>
+<circle cx="509.5" cy="256.4" r="4.5" fill="#7c3aed"><title>2021-10-31 00:00:00: 176,703.62</title></circle>
+<circle cx="515.6" cy="263.0" r="4.5" fill="#7c3aed"><title>2021-11-30 00:00:00: 157,615.88</title></circle>
+<circle cx="521.7" cy="233.8" r="4.5" fill="#7c3aed"><title>2021-12-31 00:00:00: 242,176.62</title></circle>
+<circle cx="527.8" cy="215.8" r="4.5" fill="#7c3aed"><title>2022-01-31 00:00:00: 294,070.00</title></circle>
+<circle cx="533.9" cy="205.4" r="4.5" fill="#7c3aed"><title>2022-02-28 00:00:00: 324,252.25</title></circle>
+<circle cx="540.0" cy="181.8" r="4.5" fill="#7c3aed"><title>2022-03-31 00:00:00: 392,504.75</title></circle>
+<circle cx="546.1" cy="174.3" r="4.5" fill="#7c3aed"><title>2022-04-30 00:00:00: 414,206.62</title></circle>
+<circle cx="552.2" cy="172.5" r="4.5" fill="#7c3aed"><title>2022-05-31 00:00:00: 419,453.38</title></circle>
+<circle cx="558.4" cy="180.3" r="4.5" fill="#7c3aed"><title>2022-06-30 00:00:00: 396,952.38</title></circle>
+<circle cx="564.5" cy="160.0" r="4.5" fill="#7c3aed"><title>2022-07-31 00:00:00: 455,557.00</title></circle>
+<circle cx="570.6" cy="141.1" r="4.5" fill="#7c3aed"><title>2022-08-31 00:00:00: 510,387.25</title></circle>
+<circle cx="576.7" cy="131.6" r="4.5" fill="#7c3aed"><title>2022-09-30 00:00:00: 537,717.88</title></circle>
+<circle cx="582.8" cy="146.4" r="4.5" fill="#7c3aed"><title>2022-10-31 00:00:00: 494,898.38</title></circle>
+<circle cx="588.9" cy="143.5" r="4.5" fill="#7c3aed"><title>2022-11-30 00:00:00: 503,366.62</title></circle>
+<circle cx="595.0" cy="166.4" r="4.5" fill="#7c3aed"><title>2022-12-31 00:00:00: 436,996.00</title></circle>
+<circle cx="601.1" cy="161.2" r="4.5" fill="#7c3aed"><title>2023-01-31 00:00:00: 452,177.25</title></circle>
+<circle cx="607.2" cy="156.9" r="4.5" fill="#7c3aed"><title>2023-02-28 00:00:00: 464,687.12</title></circle>
+<circle cx="613.3" cy="156.9" r="4.5" fill="#7c3aed"><title>2023-03-31 00:00:00: 464,687.12</title></circle>
+<circle cx="619.4" cy="152.2" r="4.5" fill="#7c3aed"><title>2023-04-30 00:00:00: 478,197.12</title></circle>
+<circle cx="625.6" cy="136.6" r="4.5" fill="#7c3aed"><title>2023-05-31 00:00:00: 523,268.75</title></circle>
+<circle cx="631.7" cy="147.5" r="4.5" fill="#7c3aed"><title>2023-06-30 00:00:00: 491,907.88</title></circle>
+<circle cx="637.8" cy="145.1" r="4.5" fill="#7c3aed"><title>2023-07-31 00:00:00: 498,670.38</title></circle>
+<circle cx="643.9" cy="135.0" r="4.5" fill="#7c3aed"><title>2023-08-31 00:00:00: 527,869.62</title></circle>
+<circle cx="650.0" cy="127.7" r="4.5" fill="#7c3aed"><title>2023-09-30 00:00:00: 548,959.25</title></circle>
+<circle cx="656.1" cy="145.7" r="4.5" fill="#7c3aed"><title>2023-10-31 00:00:00: 497,041.88</title></circle>
+<circle cx="662.2" cy="145.8" r="4.5" fill="#7c3aed"><title>2023-11-30 00:00:00: 496,833.25</title></circle>
+<circle cx="668.3" cy="145.0" r="4.5" fill="#7c3aed"><title>2023-12-31 00:00:00: 498,937.88</title></circle>
+<circle cx="674.4" cy="147.9" r="4.5" fill="#7c3aed"><title>2024-01-31 00:00:00: 490,753.62</title></circle>
+<circle cx="680.5" cy="148.0" r="4.5" fill="#7c3aed"><title>2024-02-29 00:00:00: 490,230.62</title></circle>
+<circle cx="686.6" cy="148.8" r="4.5" fill="#7c3aed"><title>2024-03-31 00:00:00: 487,984.50</title></circle>
+<circle cx="692.7" cy="142.7" r="4.5" fill="#7c3aed"><title>2024-04-30 00:00:00: 505,594.50</title></circle>
+<circle cx="698.9" cy="133.2" r="4.5" fill="#7c3aed"><title>2024-05-31 00:00:00: 533,169.62</title></circle>
+<circle cx="705.0" cy="130.1" r="4.5" fill="#7c3aed"><title>2024-06-30 00:00:00: 542,203.12</title></circle>
+<circle cx="711.1" cy="129.2" r="4.5" fill="#7c3aed"><title>2024-07-31 00:00:00: 544,866.00</title></circle>
+<circle cx="717.2" cy="117.0" r="4.5" fill="#7c3aed"><title>2024-08-31 00:00:00: 580,014.25</title></circle>
+<circle cx="723.3" cy="121.7" r="4.5" fill="#7c3aed"><title>2024-09-30 00:00:00: 566,398.62</title></circle>
+<circle cx="729.4" cy="126.2" r="4.5" fill="#7c3aed"><title>2024-10-31 00:00:00: 553,288.25</title></circle>
+<circle cx="735.5" cy="123.5" r="4.5" fill="#7c3aed"><title>2024-11-30 00:00:00: 561,380.12</title></circle>
+<circle cx="741.6" cy="122.8" r="4.5" fill="#7c3aed"><title>2024-12-31 00:00:00: 563,352.50</title></circle>
+<circle cx="747.7" cy="123.6" r="4.5" fill="#7c3aed"><title>2025-01-31 00:00:00: 560,952.38</title></circle>
+<circle cx="753.8" cy="123.6" r="4.5" fill="#7c3aed"><title>2025-02-28 00:00:00: 560,952.38</title></circle>
+<circle cx="759.9" cy="123.6" r="4.5" fill="#7c3aed"><title>2025-03-31 00:00:00: 560,952.38</title></circle>
+<circle cx="766.0" cy="121.8" r="4.5" fill="#7c3aed"><title>2025-04-30 00:00:00: 566,035.88</title></circle>
+<circle cx="772.2" cy="121.3" r="4.5" fill="#7c3aed"><title>2025-05-31 00:00:00: 567,491.88</title></circle>
+<circle cx="778.3" cy="114.5" r="4.5" fill="#7c3aed"><title>2025-06-30 00:00:00: 587,382.38</title></circle>
+<circle cx="784.4" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-07-31 00:00:00: 578,896.50</title></circle>
+<circle cx="790.5" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-08-31 00:00:00: 578,896.50</title></circle>
+<circle cx="796.6" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-09-30 00:00:00: 578,896.50</title></circle>
+<circle cx="802.7" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-10-31 00:00:00: 578,896.50</title></circle>
+<circle cx="808.8" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-11-30 00:00:00: 578,896.50</title></circle>
+<circle cx="814.9" cy="117.4" r="4.5" fill="#7c3aed"><title>2025-12-31 00:00:00: 578,896.50</title></circle>
+<circle cx="821.0" cy="117.4" r="4.5" fill="#7c3aed"><title>2026-01-31 00:00:00: 578,896.50</title></circle>
+<circle cx="827.1" cy="117.4" r="4.5" fill="#7c3aed"><title>2026-02-28 00:00:00: 578,896.50</title></circle>
+<circle cx="833.2" cy="117.4" r="4.5" fill="#7c3aed"><title>2026-03-31 00:00:00: 578,896.50</title></circle>
+<circle cx="839.3" cy="113.5" r="4.5" fill="#7c3aed"><title>2026-04-30 00:00:00: 590,048.88</title></circle>
+<circle cx="845.5" cy="113.3" r="4.5" fill="#7c3aed"><title>2026-05-31 00:00:00: 590,618.25</title></circle>
+<circle cx="851.6" cy="113.3" r="4.5" fill="#7c3aed"><title>2026-06-30 00:00:00: 590,618.25</title></circle>
+<circle cx="857.7" cy="113.3" r="4.5" fill="#7c3aed"><title>2026-07-31 00:00:00: 590,618.25</title></circle>
+<circle cx="863.8" cy="116.8" r="4.5" fill="#7c3aed"><title>2026-08-31 00:00:00: 580,712.62</title></circle>
+<circle cx="869.9" cy="118.5" r="4.5" fill="#7c3aed"><title>2026-09-30 00:00:00: 575,565.88</title></circle>
+<circle cx="876.0" cy="118.5" r="4.5" fill="#7c3aed"><title>2026-10-31 00:00:00: 575,565.88</title></circle>
+<line x1="613.3333333333334" y1="425" x2="633.3333333333334" y2="425" stroke="#7c3aed" stroke-width="3"/>
+<text x="639.3333333333334" y="429" class="legend">Nuclear ≥20%</text>
+<polyline points="88.0,317.5 94.1,317.5 100.2,317.5 106.3,317.5 112.4,317.5 118.5,317.5 124.7,317.5 130.8,317.3 136.9,317.3 143.0,317.3 149.1,317.3 155.2,317.7 161.3,317.7 167.4,317.7 173.5,317.7 179.6,317.8 185.7,317.8 191.8,316.6 198.0,316.6 204.1,316.7 210.2,316.7 216.3,314.9 222.4,315.0 228.5,310.1 234.6,311.3 240.7,312.2 246.8,315.9 252.9,312.6 259.0,313.2 265.1,311.0 271.3,313.8 277.4,311.1 283.5,308.2 289.6,306.0 295.7,308.9 301.8,305.2 307.9,301.9 314.0,302.6 320.1,299.2 326.2,300.2 332.3,298.1 338.4,301.4 344.6,302.1 350.7,304.8 356.8,302.5 362.9,302.3 369.0,300.6 375.1,297.3 381.2,299.4 387.3,307.8 393.4,301.7 399.5,301.7 405.6,304.8 411.8,297.0 417.9,300.5 424.0,302.7 430.1,299.8 436.2,299.4 442.3,294.2 448.4,296.9 454.5,294.2 460.6,291.8 466.7,296.8 472.8,300.1 478.9,304.8 485.1,305.0 491.2,303.1 497.3,304.8 503.4,303.6 509.5,305.0 515.6,310.3 521.7,273.6 527.8,271.0 533.9,238.2 540.0,153.3 546.1,169.2 552.2,158.8 558.4,148.8 564.5,152.0 570.6,146.2 576.7,117.1 582.8,147.7 588.9,149.4 595.0,185.2 601.1,229.6 607.2,213.6 613.3,217.3 619.4,196.0 625.6,190.5 631.7,202.1 637.8,193.3 643.9,187.3 650.0,164.4 656.1,205.9 662.2,200.7 668.3,201.9 674.4,205.2 680.5,198.9 686.6,203.2 692.7,188.6 698.9,178.4 705.0,159.6 711.1,161.5 717.2,139.1 723.3,143.4 729.4,146.6 735.5,150.2 741.6,139.2 747.7,131.1 753.8,112.4 759.9,109.6 766.0,100.7 772.2,103.8 778.3,86.8 784.4,84.6 790.5,89.2 796.6,77.3 802.7,97.9 808.8,101.5 814.9,110.4 821.0,125.0 827.1,122.4 833.2,131.9 839.3,141.6 845.5,144.9 851.6,129.7 857.7,120.8 863.8,143.4 869.9,115.0 876.0,115.0" fill="none" stroke="#059669" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="317.5" r="4.5" fill="#059669"><title>2016-01-31 00:00:00: 0.00</title></circle>
+<circle cx="94.1" cy="317.5" r="4.5" fill="#059669"><title>2016-02-29 00:00:00: 0.00</title></circle>
+<circle cx="100.2" cy="317.5" r="4.5" fill="#059669"><title>2016-03-31 00:00:00: 0.00</title></circle>
+<circle cx="106.3" cy="317.5" r="4.5" fill="#059669"><title>2016-04-30 00:00:00: 0.00</title></circle>
+<circle cx="112.4" cy="317.5" r="4.5" fill="#059669"><title>2016-05-31 00:00:00: 0.00</title></circle>
+<circle cx="118.5" cy="317.5" r="4.5" fill="#059669"><title>2016-06-30 00:00:00: 0.00</title></circle>
+<circle cx="124.7" cy="317.5" r="4.5" fill="#059669"><title>2016-07-31 00:00:00: 0.00</title></circle>
+<circle cx="130.8" cy="317.3" r="4.5" fill="#059669"><title>2016-08-31 00:00:00: 427.25</title></circle>
+<circle cx="136.9" cy="317.3" r="4.5" fill="#059669"><title>2016-09-30 00:00:00: 427.25</title></circle>
+<circle cx="143.0" cy="317.3" r="4.5" fill="#059669"><title>2016-10-31 00:00:00: 427.25</title></circle>
+<circle cx="149.1" cy="317.3" r="4.5" fill="#059669"><title>2016-11-30 00:00:00: 427.25</title></circle>
+<circle cx="155.2" cy="317.7" r="4.5" fill="#059669"><title>2016-12-31 00:00:00: -543.13</title></circle>
+<circle cx="161.3" cy="317.7" r="4.5" fill="#059669"><title>2017-01-31 00:00:00: -543.13</title></circle>
+<circle cx="167.4" cy="317.7" r="4.5" fill="#059669"><title>2017-02-28 00:00:00: -543.13</title></circle>
+<circle cx="173.5" cy="317.7" r="4.5" fill="#059669"><title>2017-03-31 00:00:00: -543.13</title></circle>
+<circle cx="179.6" cy="317.8" r="4.5" fill="#059669"><title>2017-04-30 00:00:00: -1,005.88</title></circle>
+<circle cx="185.7" cy="317.8" r="4.5" fill="#059669"><title>2017-05-31 00:00:00: -1,005.88</title></circle>
+<circle cx="191.8" cy="316.6" r="4.5" fill="#059669"><title>2017-06-30 00:00:00: 2,436.38</title></circle>
+<circle cx="198.0" cy="316.6" r="4.5" fill="#059669"><title>2017-07-31 00:00:00: 2,436.38</title></circle>
+<circle cx="204.1" cy="316.7" r="4.5" fill="#059669"><title>2017-08-31 00:00:00: 2,331.75</title></circle>
+<circle cx="210.2" cy="316.7" r="4.5" fill="#059669"><title>2017-09-30 00:00:00: 2,126.50</title></circle>
+<circle cx="216.3" cy="314.9" r="4.5" fill="#059669"><title>2017-10-31 00:00:00: 7,352.12</title></circle>
+<circle cx="222.4" cy="315.0" r="4.5" fill="#059669"><title>2017-11-30 00:00:00: 7,287.12</title></circle>
+<circle cx="228.5" cy="310.1" r="4.5" fill="#059669"><title>2017-12-31 00:00:00: 21,481.00</title></circle>
+<circle cx="234.6" cy="311.3" r="4.5" fill="#059669"><title>2018-01-31 00:00:00: 17,753.38</title></circle>
+<circle cx="240.7" cy="312.2" r="4.5" fill="#059669"><title>2018-02-28 00:00:00: 15,219.75</title></circle>
+<circle cx="246.8" cy="315.9" r="4.5" fill="#059669"><title>2018-03-31 00:00:00: 4,679.00</title></circle>
+<circle cx="252.9" cy="312.6" r="4.5" fill="#059669"><title>2018-04-30 00:00:00: 14,192.62</title></circle>
+<circle cx="259.0" cy="313.2" r="4.5" fill="#059669"><title>2018-05-31 00:00:00: 12,429.88</title></circle>
+<circle cx="265.1" cy="311.0" r="4.5" fill="#059669"><title>2018-06-30 00:00:00: 18,707.25</title></circle>
+<circle cx="271.3" cy="313.8" r="4.5" fill="#059669"><title>2018-07-31 00:00:00: 10,664.75</title></circle>
+<circle cx="277.4" cy="311.1" r="4.5" fill="#059669"><title>2018-08-31 00:00:00: 18,554.88</title></circle>
+<circle cx="283.5" cy="308.2" r="4.5" fill="#059669"><title>2018-09-30 00:00:00: 26,705.25</title></circle>
+<circle cx="289.6" cy="306.0" r="4.5" fill="#059669"><title>2018-10-31 00:00:00: 33,181.12</title></circle>
+<circle cx="295.7" cy="308.9" r="4.5" fill="#059669"><title>2018-11-30 00:00:00: 24,817.62</title></circle>
+<circle cx="301.8" cy="305.2" r="4.5" fill="#059669"><title>2018-12-31 00:00:00: 35,460.25</title></circle>
+<circle cx="307.9" cy="301.9" r="4.5" fill="#059669"><title>2019-01-31 00:00:00: 44,957.50</title></circle>
+<circle cx="314.0" cy="302.6" r="4.5" fill="#059669"><title>2019-02-28 00:00:00: 43,120.38</title></circle>
+<circle cx="320.1" cy="299.2" r="4.5" fill="#059669"><title>2019-03-31 00:00:00: 52,818.62</title></circle>
+<circle cx="326.2" cy="300.2" r="4.5" fill="#059669"><title>2019-04-30 00:00:00: 49,894.50</title></circle>
+<circle cx="332.3" cy="298.1" r="4.5" fill="#059669"><title>2019-05-31 00:00:00: 56,067.12</title></circle>
+<circle cx="338.4" cy="301.4" r="4.5" fill="#059669"><title>2019-06-30 00:00:00: 46,512.38</title></circle>
+<circle cx="344.6" cy="302.1" r="4.5" fill="#059669"><title>2019-07-31 00:00:00: 44,371.38</title></circle>
+<circle cx="350.7" cy="304.8" r="4.5" fill="#059669"><title>2019-08-31 00:00:00: 36,688.12</title></circle>
+<circle cx="356.8" cy="302.5" r="4.5" fill="#059669"><title>2019-09-30 00:00:00: 43,423.12</title></circle>
+<circle cx="362.9" cy="302.3" r="4.5" fill="#059669"><title>2019-10-31 00:00:00: 44,050.50</title></circle>
+<circle cx="369.0" cy="300.6" r="4.5" fill="#059669"><title>2019-11-30 00:00:00: 48,879.38</title></circle>
+<circle cx="375.1" cy="297.3" r="4.5" fill="#059669"><title>2019-12-31 00:00:00: 58,458.88</title></circle>
+<circle cx="381.2" cy="299.4" r="4.5" fill="#059669"><title>2020-01-31 00:00:00: 52,192.88</title></circle>
+<circle cx="387.3" cy="307.8" r="4.5" fill="#059669"><title>2020-02-29 00:00:00: 28,132.38</title></circle>
+<circle cx="393.4" cy="301.7" r="4.5" fill="#059669"><title>2020-03-31 00:00:00: 45,674.12</title></circle>
+<circle cx="399.5" cy="301.7" r="4.5" fill="#059669"><title>2020-04-30 00:00:00: 45,732.38</title></circle>
+<circle cx="405.6" cy="304.8" r="4.5" fill="#059669"><title>2020-05-31 00:00:00: 36,664.00</title></circle>
+<circle cx="411.8" cy="297.0" r="4.5" fill="#059669"><title>2020-06-30 00:00:00: 59,248.75</title></circle>
+<circle cx="417.9" cy="300.5" r="4.5" fill="#059669"><title>2020-07-31 00:00:00: 49,096.62</title></circle>
+<circle cx="424.0" cy="302.7" r="4.5" fill="#059669"><title>2020-08-31 00:00:00: 42,639.12</title></circle>
+<circle cx="430.1" cy="299.8" r="4.5" fill="#059669"><title>2020-09-30 00:00:00: 51,195.75</title></circle>
+<circle cx="436.2" cy="299.4" r="4.5" fill="#059669"><title>2020-10-31 00:00:00: 52,192.38</title></circle>
+<circle cx="442.3" cy="294.2" r="4.5" fill="#059669"><title>2020-11-30 00:00:00: 67,300.88</title></circle>
+<circle cx="448.4" cy="296.9" r="4.5" fill="#059669"><title>2020-12-31 00:00:00: 59,559.50</title></circle>
+<circle cx="454.5" cy="294.2" r="4.5" fill="#059669"><title>2021-01-31 00:00:00: 67,289.12</title></circle>
+<circle cx="460.6" cy="291.8" r="4.5" fill="#059669"><title>2021-02-28 00:00:00: 74,252.50</title></circle>
+<circle cx="466.7" cy="296.8" r="4.5" fill="#059669"><title>2021-03-31 00:00:00: 59,727.88</title></circle>
+<circle cx="472.8" cy="300.1" r="4.5" fill="#059669"><title>2021-04-30 00:00:00: 50,316.00</title></circle>
+<circle cx="478.9" cy="304.8" r="4.5" fill="#059669"><title>2021-05-31 00:00:00: 36,603.75</title></circle>
+<circle cx="485.1" cy="305.0" r="4.5" fill="#059669"><title>2021-06-30 00:00:00: 36,240.38</title></circle>
+<circle cx="491.2" cy="303.1" r="4.5" fill="#059669"><title>2021-07-31 00:00:00: 41,588.75</title></circle>
+<circle cx="497.3" cy="304.8" r="4.5" fill="#059669"><title>2021-08-31 00:00:00: 36,702.38</title></circle>
+<circle cx="503.4" cy="303.6" r="4.5" fill="#059669"><title>2021-09-30 00:00:00: 40,083.25</title></circle>
+<circle cx="509.5" cy="305.0" r="4.5" fill="#059669"><title>2021-10-31 00:00:00: 35,999.38</title></circle>
+<circle cx="515.6" cy="310.3" r="4.5" fill="#059669"><title>2021-11-30 00:00:00: 20,886.75</title></circle>
+<circle cx="521.7" cy="273.6" r="4.5" fill="#059669"><title>2021-12-31 00:00:00: 126,973.00</title></circle>
+<circle cx="527.8" cy="271.0" r="4.5" fill="#059669"><title>2022-01-31 00:00:00: 134,505.88</title></circle>
+<circle cx="533.9" cy="238.2" r="4.5" fill="#059669"><title>2022-02-28 00:00:00: 229,511.50</title></circle>
+<circle cx="540.0" cy="153.3" r="4.5" fill="#059669"><title>2022-03-31 00:00:00: 475,120.50</title></circle>
+<circle cx="546.1" cy="169.2" r="4.5" fill="#059669"><title>2022-04-30 00:00:00: 428,901.25</title></circle>
+<circle cx="552.2" cy="158.8" r="4.5" fill="#059669"><title>2022-05-31 00:00:00: 458,973.00</title></circle>
+<circle cx="558.4" cy="148.8" r="4.5" fill="#059669"><title>2022-06-30 00:00:00: 487,914.62</title></circle>
+<circle cx="564.5" cy="152.0" r="4.5" fill="#059669"><title>2022-07-31 00:00:00: 478,817.62</title></circle>
+<circle cx="570.6" cy="146.2" r="4.5" fill="#059669"><title>2022-08-31 00:00:00: 495,621.12</title></circle>
+<circle cx="576.7" cy="117.1" r="4.5" fill="#059669"><title>2022-09-30 00:00:00: 579,751.88</title></circle>
+<circle cx="582.8" cy="147.7" r="4.5" fill="#059669"><title>2022-10-31 00:00:00: 491,185.50</title></circle>
+<circle cx="588.9" cy="149.4" r="4.5" fill="#059669"><title>2022-11-30 00:00:00: 486,331.38</title></circle>
+<circle cx="595.0" cy="185.2" r="4.5" fill="#059669"><title>2022-12-31 00:00:00: 382,792.88</title></circle>
+<circle cx="601.1" cy="229.6" r="4.5" fill="#059669"><title>2023-01-31 00:00:00: 254,366.38</title></circle>
+<circle cx="607.2" cy="213.6" r="4.5" fill="#059669"><title>2023-02-28 00:00:00: 300,685.25</title></circle>
+<circle cx="613.3" cy="217.3" r="4.5" fill="#059669"><title>2023-03-31 00:00:00: 289,959.12</title></circle>
+<circle cx="619.4" cy="196.0" r="4.5" fill="#059669"><title>2023-04-30 00:00:00: 351,485.50</title></circle>
+<circle cx="625.6" cy="190.5" r="4.5" fill="#059669"><title>2023-05-31 00:00:00: 367,411.12</title></circle>
+<circle cx="631.7" cy="202.1" r="4.5" fill="#059669"><title>2023-06-30 00:00:00: 333,893.50</title></circle>
+<circle cx="637.8" cy="193.3" r="4.5" fill="#059669"><title>2023-07-31 00:00:00: 359,182.88</title></circle>
+<circle cx="643.9" cy="187.3" r="4.5" fill="#059669"><title>2023-08-31 00:00:00: 376,748.50</title></circle>
+<circle cx="650.0" cy="164.4" r="4.5" fill="#059669"><title>2023-09-30 00:00:00: 442,786.12</title></circle>
+<circle cx="656.1" cy="205.9" r="4.5" fill="#059669"><title>2023-10-31 00:00:00: 322,971.88</title></circle>
+<circle cx="662.2" cy="200.7" r="4.5" fill="#059669"><title>2023-11-30 00:00:00: 337,851.25</title></circle>
+<circle cx="668.3" cy="201.9" r="4.5" fill="#059669"><title>2023-12-31 00:00:00: 334,307.25</title></circle>
+<circle cx="674.4" cy="205.2" r="4.5" fill="#059669"><title>2024-01-31 00:00:00: 324,809.12</title></circle>
+<circle cx="680.5" cy="198.9" r="4.5" fill="#059669"><title>2024-02-29 00:00:00: 343,164.88</title></circle>
+<circle cx="686.6" cy="203.2" r="4.5" fill="#059669"><title>2024-03-31 00:00:00: 330,659.50</title></circle>
+<circle cx="692.7" cy="188.6" r="4.5" fill="#059669"><title>2024-04-30 00:00:00: 372,840.00</title></circle>
+<circle cx="698.9" cy="178.4" r="4.5" fill="#059669"><title>2024-05-31 00:00:00: 402,426.75</title></circle>
+<circle cx="705.0" cy="159.6" r="4.5" fill="#059669"><title>2024-06-30 00:00:00: 456,700.38</title></circle>
+<circle cx="711.1" cy="161.5" r="4.5" fill="#059669"><title>2024-07-31 00:00:00: 451,310.12</title></circle>
+<circle cx="717.2" cy="139.1" r="4.5" fill="#059669"><title>2024-08-31 00:00:00: 515,963.38</title></circle>
+<circle cx="723.3" cy="143.4" r="4.5" fill="#059669"><title>2024-09-30 00:00:00: 503,723.00</title></circle>
+<circle cx="729.4" cy="146.6" r="4.5" fill="#059669"><title>2024-10-31 00:00:00: 494,490.12</title></circle>
+<circle cx="735.5" cy="150.2" r="4.5" fill="#059669"><title>2024-11-30 00:00:00: 483,953.38</title></circle>
+<circle cx="741.6" cy="139.2" r="4.5" fill="#059669"><title>2024-12-31 00:00:00: 515,886.88</title></circle>
+<circle cx="747.7" cy="131.1" r="4.5" fill="#059669"><title>2025-01-31 00:00:00: 539,303.00</title></circle>
+<circle cx="753.8" cy="112.4" r="4.5" fill="#059669"><title>2025-02-28 00:00:00: 593,315.25</title></circle>
+<circle cx="759.9" cy="109.6" r="4.5" fill="#059669"><title>2025-03-31 00:00:00: 601,405.00</title></circle>
+<circle cx="766.0" cy="100.7" r="4.5" fill="#059669"><title>2025-04-30 00:00:00: 627,111.75</title></circle>
+<circle cx="772.2" cy="103.8" r="4.5" fill="#059669"><title>2025-05-31 00:00:00: 618,289.75</title></circle>
+<circle cx="778.3" cy="86.8" r="4.5" fill="#059669"><title>2025-06-30 00:00:00: 667,466.25</title></circle>
+<circle cx="784.4" cy="84.6" r="4.5" fill="#059669"><title>2025-07-31 00:00:00: 673,649.62</title></circle>
+<circle cx="790.5" cy="89.2" r="4.5" fill="#059669"><title>2025-08-31 00:00:00: 660,393.38</title></circle>
+<circle cx="796.6" cy="77.3" r="4.5" fill="#059669"><title>2025-09-30 00:00:00: 694,977.75</title></circle>
+<circle cx="802.7" cy="97.9" r="4.5" fill="#059669"><title>2025-10-31 00:00:00: 635,434.75</title></circle>
+<circle cx="808.8" cy="101.5" r="4.5" fill="#059669"><title>2025-11-30 00:00:00: 624,941.50</title></circle>
+<circle cx="814.9" cy="110.4" r="4.5" fill="#059669"><title>2025-12-31 00:00:00: 599,094.25</title></circle>
+<circle cx="821.0" cy="125.0" r="4.5" fill="#059669"><title>2026-01-31 00:00:00: 556,921.62</title></circle>
+<circle cx="827.1" cy="122.4" r="4.5" fill="#059669"><title>2026-02-28 00:00:00: 564,387.62</title></circle>
+<circle cx="833.2" cy="131.9" r="4.5" fill="#059669"><title>2026-03-31 00:00:00: 537,046.38</title></circle>
+<circle cx="839.3" cy="141.6" r="4.5" fill="#059669"><title>2026-04-30 00:00:00: 509,009.00</title></circle>
+<circle cx="845.5" cy="144.9" r="4.5" fill="#059669"><title>2026-05-31 00:00:00: 499,367.62</title></circle>
+<circle cx="851.6" cy="129.7" r="4.5" fill="#059669"><title>2026-06-30 00:00:00: 543,370.88</title></circle>
+<circle cx="857.7" cy="120.8" r="4.5" fill="#059669"><title>2026-07-31 00:00:00: 568,978.50</title></circle>
+<circle cx="863.8" cy="143.4" r="4.5" fill="#059669"><title>2026-08-31 00:00:00: 503,786.38</title></circle>
+<circle cx="869.9" cy="115.0" r="4.5" fill="#059669"><title>2026-09-30 00:00:00: 585,696.38</title></circle>
+<circle cx="876.0" cy="115.0" r="4.5" fill="#059669"><title>2026-10-31 00:00:00: 585,728.50</title></circle>
+<line x1="88.0" y1="443" x2="108.0" y2="443" stroke="#059669" stroke-width="3"/>
+<text x="114.0" y="447" class="legend">Wind + solar ≥30%</text>
+<polyline points="88.0,318.6 94.1,318.4 100.2,315.9 106.3,316.7 112.4,316.5 118.5,317.1 124.7,316.8 130.8,313.9 136.9,313.8 143.0,314.2 149.1,315.3 155.2,313.7 161.3,313.0 167.4,308.4 173.5,308.6 179.6,307.3 185.7,312.3 191.8,310.2 198.0,312.0 204.1,310.7 210.2,312.6 216.3,307.6 222.4,309.3 228.5,306.8 234.6,310.4 240.7,315.2 246.8,334.7 252.9,331.5 259.0,333.3 265.1,331.5 271.3,335.4 277.4,332.8 283.5,330.9 289.6,330.9 295.7,335.0 301.8,332.0 307.9,329.4 314.0,331.3 320.1,329.0 326.2,329.7 332.3,326.1 338.4,331.1 344.6,331.5 350.7,334.0 356.8,330.5 362.9,332.3 369.0,329.1 375.1,327.9 381.2,327.5 387.3,334.6 393.4,329.9 399.5,333.4 405.6,339.6 411.8,330.2 417.9,333.3 424.0,335.8 430.1,332.8 436.2,331.1 442.3,325.3 448.4,326.7 454.5,325.5 460.6,325.4 466.7,332.1 472.8,336.0 478.9,342.3 485.1,345.0 491.2,342.5 497.3,342.9 503.4,341.2 509.5,336.7 515.6,338.4 521.7,277.6 527.8,272.0 533.9,241.5 540.0,153.6 546.1,174.8 552.2,169.9 558.4,154.7 564.5,146.6 570.6,128.9 576.7,103.1 582.8,130.3 588.9,135.1 595.0,178.0 601.1,215.8 607.2,208.4 613.3,209.1 619.4,188.9 625.6,179.9 631.7,202.5 637.8,192.6 643.9,188.3 650.0,171.4 656.1,215.1 662.2,203.1 668.3,205.0 674.4,204.1 680.5,196.3 686.6,199.9 692.7,181.6 698.9,177.8 705.0,163.9 711.1,170.4 717.2,155.5 723.3,159.5 729.4,160.0 735.5,163.6 741.6,153.6 747.7,146.3 753.8,129.6 759.9,127.9 766.0,121.0 772.2,120.9 778.3,105.1 784.4,105.3 790.5,107.0 796.6,97.3 802.7,117.4 808.8,118.9 814.9,123.0 821.0,136.2 827.1,135.0 833.2,144.8 839.3,152.7 845.5,159.0 851.6,149.3 857.7,147.3 863.8,172.5 869.9,141.6 876.0,141.2" fill="none" stroke="#dc2626" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="318.6" r="4.5" fill="#dc2626"><title>2016-01-31 00:00:00: -3,105.12</title></circle>
+<circle cx="94.1" cy="318.4" r="4.5" fill="#dc2626"><title>2016-02-29 00:00:00: -2,730.13</title></circle>
+<circle cx="100.2" cy="315.9" r="4.5" fill="#dc2626"><title>2016-03-31 00:00:00: 4,423.00</title></circle>
+<circle cx="106.3" cy="316.7" r="4.5" fill="#dc2626"><title>2016-04-30 00:00:00: 2,184.38</title></circle>
+<circle cx="112.4" cy="316.5" r="4.5" fill="#dc2626"><title>2016-05-31 00:00:00: 2,942.00</title></circle>
+<circle cx="118.5" cy="317.1" r="4.5" fill="#dc2626"><title>2016-06-30 00:00:00: 969.12</title></circle>
+<circle cx="124.7" cy="316.8" r="4.5" fill="#dc2626"><title>2016-07-31 00:00:00: 1,912.87</title></circle>
+<circle cx="130.8" cy="313.9" r="4.5" fill="#dc2626"><title>2016-08-31 00:00:00: 10,353.88</title></circle>
+<circle cx="136.9" cy="313.8" r="4.5" fill="#dc2626"><title>2016-09-30 00:00:00: 10,662.00</title></circle>
+<circle cx="143.0" cy="314.2" r="4.5" fill="#dc2626"><title>2016-10-31 00:00:00: 9,388.75</title></circle>
+<circle cx="149.1" cy="315.3" r="4.5" fill="#dc2626"><title>2016-11-30 00:00:00: 6,392.12</title></circle>
+<circle cx="155.2" cy="313.7" r="4.5" fill="#dc2626"><title>2016-12-31 00:00:00: 10,933.75</title></circle>
+<circle cx="161.3" cy="313.0" r="4.5" fill="#dc2626"><title>2017-01-31 00:00:00: 12,972.38</title></circle>
+<circle cx="167.4" cy="308.4" r="4.5" fill="#dc2626"><title>2017-02-28 00:00:00: 26,239.25</title></circle>
+<circle cx="173.5" cy="308.6" r="4.5" fill="#dc2626"><title>2017-03-31 00:00:00: 25,768.38</title></circle>
+<circle cx="179.6" cy="307.3" r="4.5" fill="#dc2626"><title>2017-04-30 00:00:00: 29,532.62</title></circle>
+<circle cx="185.7" cy="312.3" r="4.5" fill="#dc2626"><title>2017-05-31 00:00:00: 15,024.12</title></circle>
+<circle cx="191.8" cy="310.2" r="4.5" fill="#dc2626"><title>2017-06-30 00:00:00: 21,084.75</title></circle>
+<circle cx="198.0" cy="312.0" r="4.5" fill="#dc2626"><title>2017-07-31 00:00:00: 15,905.12</title></circle>
+<circle cx="204.1" cy="310.7" r="4.5" fill="#dc2626"><title>2017-08-31 00:00:00: 19,523.62</title></circle>
+<circle cx="210.2" cy="312.6" r="4.5" fill="#dc2626"><title>2017-09-30 00:00:00: 14,230.88</title></circle>
+<circle cx="216.3" cy="307.6" r="4.5" fill="#dc2626"><title>2017-10-31 00:00:00: 28,558.75</title></circle>
+<circle cx="222.4" cy="309.3" r="4.5" fill="#dc2626"><title>2017-11-30 00:00:00: 23,588.50</title></circle>
+<circle cx="228.5" cy="306.8" r="4.5" fill="#dc2626"><title>2017-12-31 00:00:00: 31,008.12</title></circle>
+<circle cx="234.6" cy="310.4" r="4.5" fill="#dc2626"><title>2018-01-31 00:00:00: 20,426.00</title></circle>
+<circle cx="240.7" cy="315.2" r="4.5" fill="#dc2626"><title>2018-02-28 00:00:00: 6,546.12</title></circle>
+<circle cx="246.8" cy="334.7" r="4.5" fill="#dc2626"><title>2018-03-31 00:00:00: -49,819.38</title></circle>
+<circle cx="252.9" cy="331.5" r="4.5" fill="#dc2626"><title>2018-04-30 00:00:00: -40,680.50</title></circle>
+<circle cx="259.0" cy="333.3" r="4.5" fill="#dc2626"><title>2018-05-31 00:00:00: -45,925.62</title></circle>
+<circle cx="265.1" cy="331.5" r="4.5" fill="#dc2626"><title>2018-06-30 00:00:00: -40,643.00</title></circle>
+<circle cx="271.3" cy="335.4" r="4.5" fill="#dc2626"><title>2018-07-31 00:00:00: -51,973.50</title></circle>
+<circle cx="277.4" cy="332.8" r="4.5" fill="#dc2626"><title>2018-08-31 00:00:00: -44,311.88</title></circle>
+<circle cx="283.5" cy="330.9" r="4.5" fill="#dc2626"><title>2018-09-30 00:00:00: -38,750.00</title></circle>
+<circle cx="289.6" cy="330.9" r="4.5" fill="#dc2626"><title>2018-10-31 00:00:00: -38,943.25</title></circle>
+<circle cx="295.7" cy="335.0" r="4.5" fill="#dc2626"><title>2018-11-30 00:00:00: -50,710.62</title></circle>
+<circle cx="301.8" cy="332.0" r="4.5" fill="#dc2626"><title>2018-12-31 00:00:00: -42,137.62</title></circle>
+<circle cx="307.9" cy="329.4" r="4.5" fill="#dc2626"><title>2019-01-31 00:00:00: -34,394.38</title></circle>
+<circle cx="314.0" cy="331.3" r="4.5" fill="#dc2626"><title>2019-02-28 00:00:00: -39,885.50</title></circle>
+<circle cx="320.1" cy="329.0" r="4.5" fill="#dc2626"><title>2019-03-31 00:00:00: -33,355.12</title></circle>
+<circle cx="326.2" cy="329.7" r="4.5" fill="#dc2626"><title>2019-04-30 00:00:00: -35,253.25</title></circle>
+<circle cx="332.3" cy="326.1" r="4.5" fill="#dc2626"><title>2019-05-31 00:00:00: -24,836.50</title></circle>
+<circle cx="338.4" cy="331.1" r="4.5" fill="#dc2626"><title>2019-06-30 00:00:00: -39,290.88</title></circle>
+<circle cx="344.6" cy="331.5" r="4.5" fill="#dc2626"><title>2019-07-31 00:00:00: -40,502.62</title></circle>
+<circle cx="350.7" cy="334.0" r="4.5" fill="#dc2626"><title>2019-08-31 00:00:00: -47,695.00</title></circle>
+<circle cx="356.8" cy="330.5" r="4.5" fill="#dc2626"><title>2019-09-30 00:00:00: -37,627.38</title></circle>
+<circle cx="362.9" cy="332.3" r="4.5" fill="#dc2626"><title>2019-10-31 00:00:00: -42,827.25</title></circle>
+<circle cx="369.0" cy="329.1" r="4.5" fill="#dc2626"><title>2019-11-30 00:00:00: -33,606.88</title></circle>
+<circle cx="375.1" cy="327.9" r="4.5" fill="#dc2626"><title>2019-12-31 00:00:00: -30,273.50</title></circle>
+<circle cx="381.2" cy="327.5" r="4.5" fill="#dc2626"><title>2020-01-31 00:00:00: -29,070.38</title></circle>
+<circle cx="387.3" cy="334.6" r="4.5" fill="#dc2626"><title>2020-02-29 00:00:00: -49,654.25</title></circle>
+<circle cx="393.4" cy="329.9" r="4.5" fill="#dc2626"><title>2020-03-31 00:00:00: -36,071.62</title></circle>
+<circle cx="399.5" cy="333.4" r="4.5" fill="#dc2626"><title>2020-04-30 00:00:00: -46,000.25</title></circle>
+<circle cx="405.6" cy="339.6" r="4.5" fill="#dc2626"><title>2020-05-31 00:00:00: -63,974.62</title></circle>
+<circle cx="411.8" cy="330.2" r="4.5" fill="#dc2626"><title>2020-06-30 00:00:00: -36,948.00</title></circle>
+<circle cx="417.9" cy="333.3" r="4.5" fill="#dc2626"><title>2020-07-31 00:00:00: -45,814.62</title></circle>
+<circle cx="424.0" cy="335.8" r="4.5" fill="#dc2626"><title>2020-08-31 00:00:00: -52,989.38</title></circle>
+<circle cx="430.1" cy="332.8" r="4.5" fill="#dc2626"><title>2020-09-30 00:00:00: -44,462.00</title></circle>
+<circle cx="436.2" cy="331.1" r="4.5" fill="#dc2626"><title>2020-10-31 00:00:00: -39,390.75</title></circle>
+<circle cx="442.3" cy="325.3" r="4.5" fill="#dc2626"><title>2020-11-30 00:00:00: -22,680.38</title></circle>
+<circle cx="448.4" cy="326.7" r="4.5" fill="#dc2626"><title>2020-12-31 00:00:00: -26,625.00</title></circle>
+<circle cx="454.5" cy="325.5" r="4.5" fill="#dc2626"><title>2021-01-31 00:00:00: -23,091.12</title></circle>
+<circle cx="460.6" cy="325.4" r="4.5" fill="#dc2626"><title>2021-02-28 00:00:00: -22,965.88</title></circle>
+<circle cx="466.7" cy="332.1" r="4.5" fill="#dc2626"><title>2021-03-31 00:00:00: -42,293.88</title></circle>
+<circle cx="472.8" cy="336.0" r="4.5" fill="#dc2626"><title>2021-04-30 00:00:00: -53,460.38</title></circle>
+<circle cx="478.9" cy="342.3" r="4.5" fill="#dc2626"><title>2021-05-31 00:00:00: -71,692.25</title></circle>
+<circle cx="485.1" cy="345.0" r="4.5" fill="#dc2626"><title>2021-06-30 00:00:00: -79,683.75</title></circle>
+<circle cx="491.2" cy="342.5" r="4.5" fill="#dc2626"><title>2021-07-31 00:00:00: -72,484.12</title></circle>
+<circle cx="497.3" cy="342.9" r="4.5" fill="#dc2626"><title>2021-08-31 00:00:00: -73,643.62</title></circle>
+<circle cx="503.4" cy="341.2" r="4.5" fill="#dc2626"><title>2021-09-30 00:00:00: -68,548.88</title></circle>
+<circle cx="509.5" cy="336.7" r="4.5" fill="#dc2626"><title>2021-10-31 00:00:00: -55,609.50</title></circle>
+<circle cx="515.6" cy="338.4" r="4.5" fill="#dc2626"><title>2021-11-30 00:00:00: -60,576.12</title></circle>
+<circle cx="521.7" cy="277.6" r="4.5" fill="#dc2626"><title>2021-12-31 00:00:00: 115,367.00</title></circle>
+<circle cx="527.8" cy="272.0" r="4.5" fill="#dc2626"><title>2022-01-31 00:00:00: 131,598.00</title></circle>
+<circle cx="533.9" cy="241.5" r="4.5" fill="#dc2626"><title>2022-02-28 00:00:00: 219,958.50</title></circle>
+<circle cx="540.0" cy="153.6" r="4.5" fill="#dc2626"><title>2022-03-31 00:00:00: 474,234.25</title></circle>
+<circle cx="546.1" cy="174.8" r="4.5" fill="#dc2626"><title>2022-04-30 00:00:00: 412,695.25</title></circle>
+<circle cx="552.2" cy="169.9" r="4.5" fill="#dc2626"><title>2022-05-31 00:00:00: 427,037.00</title></circle>
+<circle cx="558.4" cy="154.7" r="4.5" fill="#dc2626"><title>2022-06-30 00:00:00: 471,001.38</title></circle>
+<circle cx="564.5" cy="146.6" r="4.5" fill="#dc2626"><title>2022-07-31 00:00:00: 494,432.50</title></circle>
+<circle cx="570.6" cy="128.9" r="4.5" fill="#dc2626"><title>2022-08-31 00:00:00: 545,623.62</title></circle>
+<circle cx="576.7" cy="103.1" r="4.5" fill="#dc2626"><title>2022-09-30 00:00:00: 620,314.12</title></circle>
+<circle cx="582.8" cy="130.3" r="4.5" fill="#dc2626"><title>2022-10-31 00:00:00: 541,442.12</title></circle>
+<circle cx="588.9" cy="135.1" r="4.5" fill="#dc2626"><title>2022-11-30 00:00:00: 527,567.12</title></circle>
+<circle cx="595.0" cy="178.0" r="4.5" fill="#dc2626"><title>2022-12-31 00:00:00: 403,410.00</title></circle>
+<circle cx="601.1" cy="215.8" r="4.5" fill="#dc2626"><title>2023-01-31 00:00:00: 294,205.12</title></circle>
+<circle cx="607.2" cy="208.4" r="4.5" fill="#dc2626"><title>2023-02-28 00:00:00: 315,516.50</title></circle>
+<circle cx="613.3" cy="209.1" r="4.5" fill="#dc2626"><title>2023-03-31 00:00:00: 313,701.25</title></circle>
+<circle cx="619.4" cy="188.9" r="4.5" fill="#dc2626"><title>2023-04-30 00:00:00: 372,118.62</title></circle>
+<circle cx="625.6" cy="179.9" r="4.5" fill="#dc2626"><title>2023-05-31 00:00:00: 398,135.75</title></circle>
+<circle cx="631.7" cy="202.5" r="4.5" fill="#dc2626"><title>2023-06-30 00:00:00: 332,798.88</title></circle>
+<circle cx="637.8" cy="192.6" r="4.5" fill="#dc2626"><title>2023-07-31 00:00:00: 361,414.25</title></circle>
+<circle cx="643.9" cy="188.3" r="4.5" fill="#dc2626"><title>2023-08-31 00:00:00: 373,664.00</title></circle>
+<circle cx="650.0" cy="171.4" r="4.5" fill="#dc2626"><title>2023-09-30 00:00:00: 422,787.25</title></circle>
+<circle cx="656.1" cy="215.1" r="4.5" fill="#dc2626"><title>2023-10-31 00:00:00: 296,262.88</title></circle>
+<circle cx="662.2" cy="203.1" r="4.5" fill="#dc2626"><title>2023-11-30 00:00:00: 330,813.00</title></circle>
+<circle cx="668.3" cy="205.0" r="4.5" fill="#dc2626"><title>2023-12-31 00:00:00: 325,533.38</title></circle>
+<circle cx="674.4" cy="204.1" r="4.5" fill="#dc2626"><title>2024-01-31 00:00:00: 328,075.25</title></circle>
+<circle cx="680.5" cy="196.3" r="4.5" fill="#dc2626"><title>2024-02-29 00:00:00: 350,593.00</title></circle>
+<circle cx="686.6" cy="199.9" r="4.5" fill="#dc2626"><title>2024-03-31 00:00:00: 340,065.50</title></circle>
+<circle cx="692.7" cy="181.6" r="4.5" fill="#dc2626"><title>2024-04-30 00:00:00: 393,277.00</title></circle>
+<circle cx="698.9" cy="177.8" r="4.5" fill="#dc2626"><title>2024-05-31 00:00:00: 404,033.00</title></circle>
+<circle cx="705.0" cy="163.9" r="4.5" fill="#dc2626"><title>2024-06-30 00:00:00: 444,217.62</title></circle>
+<circle cx="711.1" cy="170.4" r="4.5" fill="#dc2626"><title>2024-07-31 00:00:00: 425,494.38</title></circle>
+<circle cx="717.2" cy="155.5" r="4.5" fill="#dc2626"><title>2024-08-31 00:00:00: 468,585.75</title></circle>
+<circle cx="723.3" cy="159.5" r="4.5" fill="#dc2626"><title>2024-09-30 00:00:00: 456,944.62</title></circle>
+<circle cx="729.4" cy="160.0" r="4.5" fill="#dc2626"><title>2024-10-31 00:00:00: 455,752.88</title></circle>
+<circle cx="735.5" cy="163.6" r="4.5" fill="#dc2626"><title>2024-11-30 00:00:00: 445,145.12</title></circle>
+<circle cx="741.6" cy="153.6" r="4.5" fill="#dc2626"><title>2024-12-31 00:00:00: 474,133.25</title></circle>
+<circle cx="747.7" cy="146.3" r="4.5" fill="#dc2626"><title>2025-01-31 00:00:00: 495,396.50</title></circle>
+<circle cx="753.8" cy="129.6" r="4.5" fill="#dc2626"><title>2025-02-28 00:00:00: 543,474.88</title></circle>
+<circle cx="759.9" cy="127.9" r="4.5" fill="#dc2626"><title>2025-03-31 00:00:00: 548,602.00</title></circle>
+<circle cx="766.0" cy="121.0" r="4.5" fill="#dc2626"><title>2025-04-30 00:00:00: 568,600.00</title></circle>
+<circle cx="772.2" cy="120.9" r="4.5" fill="#dc2626"><title>2025-05-31 00:00:00: 568,729.38</title></circle>
+<circle cx="778.3" cy="105.1" r="4.5" fill="#dc2626"><title>2025-06-30 00:00:00: 614,411.12</title></circle>
+<circle cx="784.4" cy="105.3" r="4.5" fill="#dc2626"><title>2025-07-31 00:00:00: 614,017.25</title></circle>
+<circle cx="790.5" cy="107.0" r="4.5" fill="#dc2626"><title>2025-08-31 00:00:00: 608,949.62</title></circle>
+<circle cx="796.6" cy="97.3" r="4.5" fill="#dc2626"><title>2025-09-30 00:00:00: 636,977.25</title></circle>
+<circle cx="802.7" cy="117.4" r="4.5" fill="#dc2626"><title>2025-10-31 00:00:00: 578,761.88</title></circle>
+<circle cx="808.8" cy="118.9" r="4.5" fill="#dc2626"><title>2025-11-30 00:00:00: 574,602.25</title></circle>
+<circle cx="814.9" cy="123.0" r="4.5" fill="#dc2626"><title>2025-12-31 00:00:00: 562,712.75</title></circle>
+<circle cx="821.0" cy="136.2" r="4.5" fill="#dc2626"><title>2026-01-31 00:00:00: 524,504.50</title></circle>
+<circle cx="827.1" cy="135.0" r="4.5" fill="#dc2626"><title>2026-02-28 00:00:00: 528,036.75</title></circle>
+<circle cx="833.2" cy="144.8" r="4.5" fill="#dc2626"><title>2026-03-31 00:00:00: 499,621.62</title></circle>
+<circle cx="839.3" cy="152.7" r="4.5" fill="#dc2626"><title>2026-04-30 00:00:00: 476,608.50</title></circle>
+<circle cx="845.5" cy="159.0" r="4.5" fill="#dc2626"><title>2026-05-31 00:00:00: 458,397.00</title></circle>
+<circle cx="851.6" cy="149.3" r="4.5" fill="#dc2626"><title>2026-06-30 00:00:00: 486,694.00</title></circle>
+<circle cx="857.7" cy="147.3" r="4.5" fill="#dc2626"><title>2026-07-31 00:00:00: 492,239.25</title></circle>
+<circle cx="863.8" cy="172.5" r="4.5" fill="#dc2626"><title>2026-08-31 00:00:00: 419,334.62</title></circle>
+<circle cx="869.9" cy="141.6" r="4.5" fill="#dc2626"><title>2026-09-30 00:00:00: 508,925.00</title></circle>
+<circle cx="876.0" cy="141.2" r="4.5" fill="#dc2626"><title>2026-10-31 00:00:00: 510,137.38</title></circle>
+<line x1="350.6666666666667" y1="443" x2="370.6666666666667" y2="443" stroke="#dc2626" stroke-width="3"/>
+<text x="376.6666666666667" y="447" class="legend">Wind + solar + nuclear ≥45%</text>
+<text x="88.0" y="398" text-anchor="middle" class="axis">2016-01</text>
+<text x="240.7" y="398" text-anchor="middle" class="axis">2018-02</text>
+<text x="399.5" y="398" text-anchor="middle" class="axis">2020-04</text>
+<text x="558.4" y="398" text-anchor="middle" class="axis">2022-06</text>
+<text x="717.2" y="398" text-anchor="middle" class="axis">2024-08</text>
+<text x="876.0" y="398" text-anchor="middle" class="axis">2026-10</text>
+</svg></div>
+<table><thead><tr><th>Strategy</th><th>Days</th><th>Active days</th><th>Gross P/L</th><th>Profitable days</th><th>Daily Sharpe*</th><th>Max drawdown</th></tr></thead><tbody><tr><td>Wind ≥30%, short and hold</td><td>3,925</td><td>1,797</td><td>£583,238</td><td>23.4%</td><td>0.41</td><td>-£408,755</td></tr><tr><td>Solar ≥0.5%, short and hold</td><td>3,925</td><td>704</td><td>-£79,679</td><td>9.5%</td><td>-0.14</td><td>-£233,987</td></tr><tr><td>Nuclear ≥20%, short and hold</td><td>3,925</td><td>2,817</td><td>£575,566</td><td>37.5%</td><td>0.60</td><td>-£173,916</td></tr><tr><td>Wind + solar ≥30%, short and hold</td><td>3,925</td><td>1,808</td><td>£585,728</td><td>23.6%</td><td>0.41</td><td>-£408,755</td></tr><tr><td>Wind + solar + nuclear ≥45%, short and hold</td><td>3,925</td><td>2,358</td><td>£510,137</td><td>29.8%</td><td>0.35</td><td>-£406,786</td></tr><tr><td>Always +25 MW, held</td><td>3,925</td><td>3,925</td><td>-£3,059,606</td><td>45.5%</td><td>-0.73</td><td>-£3,321,010</td></tr><tr><td>Always −25 MW, held</td><td>3,925</td><td>3,925</td><td>£3,059,606</td><td>54.5%</td><td>0.73</td><td>-£726,653</td></tr><tr><td>Flat</td><td>3,925</td><td>0</td><td>£0</td><td>0.0%</td><td>—</td><td>£0</td></tr></tbody></table>
+<p>Usable observations: 187,597 half-hours over 3,925 delivery days. The wind-only 30% rule traded in 41,368 half-hours across 1,797 days. Its most profitable day was £78,925 and its worst was -£44,222. The level-rule P/L is highly dependent on the selected feature and threshold, and comparisons to the constant-short benchmark remain important.</p>
+<p class="small">*Annualised daily Sharpe-like statistic, calculated from daily gross P/L with no risk-free adjustment. Maximum drawdown is from cumulative daily P/L starting at £0. No fees, bid/offer, market impact, collateral, or transaction limits beyond ±25 MW are modelled.</p>
+
+<h2>Does the 3pm Elexon signal help?</h2>
+<div class="chart"><svg viewBox="0 0 900 370" role="img" aria-label="Elexon revision bins vs auction repricing">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Elexon revision bins vs auction repricing</text>
+<text x="88" y="43" class="chart-subtitle">Hourly delivery periods only; forecasts are the latest versions published before 9am and 3pm UK time.</text>
+<line x1="88" y1="288.0" x2="876" y2="288.0" class="grid"/>
+<text x="78" y="292.0" text-anchor="end" class="axis">0</text>
+<line x1="88" y1="229.7" x2="876" y2="229.7" class="grid"/>
+<text x="78" y="233.7" text-anchor="end" class="axis">1</text>
+<line x1="88" y1="171.5" x2="876" y2="171.5" class="grid"/>
+<text x="78" y="175.5" text-anchor="end" class="axis">1</text>
+<line x1="88" y1="113.2" x2="876" y2="113.2" class="grid"/>
+<text x="78" y="117.2" text-anchor="end" class="axis">1</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">1</text>
+<line x1="88" y1="55" x2="88" y2="288" class="axis-line"/>
+<line x1="88" y1="288" x2="876" y2="288" class="axis-line"/>
+<text transform="translate(18 171.5) rotate(-90)" text-anchor="middle" class="axis-title">DA-HH less DA-HR (£/MWh)</text>
+<polyline points="88.0,71.1 285.0,208.9 482.0,229.7 679.0,271.9 876.0,257.4" fill="none" stroke="#7c3aed" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="71.1" r="4.5" fill="#7c3aed"><title>Q1: 1.09</title></circle>
+<circle cx="285.0" cy="208.9" r="4.5" fill="#7c3aed"><title>Q2: 0.68</title></circle>
+<circle cx="482.0" cy="229.7" r="4.5" fill="#7c3aed"><title>Q3: 0.62</title></circle>
+<circle cx="679.0" cy="271.9" r="4.5" fill="#7c3aed"><title>Q4: 0.50</title></circle>
+<circle cx="876.0" cy="257.4" r="4.5" fill="#7c3aed"><title>Q5: 0.54</title></circle>
+<line x1="88.0" y1="335" x2="108.0" y2="335" stroke="#7c3aed" stroke-width="3"/>
+<text x="114.0" y="339" class="legend">DA-HH less DA-HR</text>
+<text x="88.0" y="308" text-anchor="middle" class="axis">Q1</text>
+<text x="285.0" y="308" text-anchor="middle" class="axis">Q2</text>
+<text x="482.0" y="308" text-anchor="middle" class="axis">Q3</text>
+<text x="679.0" y="308" text-anchor="middle" class="axis">Q4</text>
+<text x="876.0" y="308" text-anchor="middle" class="axis">Q5</text>
+</svg></div>
+<table><thead><tr><th>Elexon revision quintile</th><th>Hourly periods</th><th>Mean forecast revision (MW)</th><th>DA-HH − DA-HR (£/MWh)</th><th>Cashout − DA-HH (£/MWh)</th></tr></thead><tbody><tr><td>Q1</td><td>6,567</td><td>-613</td><td>+1.09</td><td>-0.93</td></tr><tr><td>Q2</td><td>6,531</td><td>-135</td><td>+0.68</td><td>+0.35</td></tr><tr><td>Q3</td><td>6,596</td><td>-3</td><td>+0.62</td><td>-0.11</td></tr><tr><td>Q4</td><td>6,500</td><td>+113</td><td>+0.50</td><td>-0.01</td></tr><tr><td>Q5</td><td>6,533</td><td>+608</td><td>+0.54</td><td>-1.72</td></tr></tbody></table>
+<div class="chart"><svg viewBox="0 0 900 460" role="img" aria-label="Cumulative P/L on the Elexon overlap">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="88" y="25" class="chart-title">Cumulative P/L on the Elexon overlap</text>
+<text x="88" y="43" class="chart-subtitle">1,367 delivery days from 2 January 2023 to 2 October 2026; hourly wind revisions applied to both half-hours.</text>
+<line x1="88" y1="378.0" x2="876" y2="378.0" class="grid"/>
+<text x="78" y="382.0" text-anchor="end" class="axis">-302,446</text>
+<line x1="88" y1="297.2" x2="876" y2="297.2" class="grid"/>
+<text x="78" y="301.2" text-anchor="end" class="axis">-93,892</text>
+<line x1="88" y1="216.5" x2="876" y2="216.5" class="grid"/>
+<text x="78" y="220.5" text-anchor="end" class="axis">114,663</text>
+<line x1="88" y1="135.8" x2="876" y2="135.8" class="grid"/>
+<text x="78" y="139.8" text-anchor="end" class="axis">323,217</text>
+<line x1="88" y1="55.0" x2="876" y2="55.0" class="grid"/>
+<text x="78" y="59.0" text-anchor="end" class="axis">531,771</text>
+<line x1="88" y1="260.9" x2="876" y2="260.9" class="zero"/>
+<line x1="88" y1="55" x2="88" y2="378" class="axis-line"/>
+<line x1="88" y1="378" x2="876" y2="378" class="axis-line"/>
+<text transform="translate(18 216.5) rotate(-90)" text-anchor="middle" class="axis-title">Cumulative gross P/L (£)</text>
+<polyline points="88.0,249.1 105.5,238.5 123.0,240.8 140.5,242.1 158.0,230.2 175.6,224.1 193.1,196.7 210.6,188.3 228.1,175.6 245.6,136.6 263.1,122.4 280.6,117.4 298.1,105.3 315.6,110.1 333.2,114.3 350.7,100.9 368.2,93.6 385.7,121.6 403.2,125.5 420.7,130.1 438.2,155.3 455.7,150.8 473.2,167.1 490.8,150.4 508.3,99.0 525.8,108.8 543.3,111.0 560.8,103.7 578.3,102.2 595.8,119.2 613.3,106.0 630.8,83.9 648.4,77.3 665.9,95.5 683.4,118.1 700.9,112.1 718.4,106.0 735.9,105.0 753.4,99.4 770.9,128.1 788.4,116.0 806.0,117.4 823.5,109.1 841.0,126.2 858.5,112.2 876.0,111.3" fill="none" stroke="#7c3aed" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="249.1" r="4.5" fill="#7c3aed"><title>2023-01-31 00:00:00: 30,586.13</title></circle>
+<circle cx="105.5" cy="238.5" r="4.5" fill="#7c3aed"><title>2023-02-28 00:00:00: 57,803.13</title></circle>
+<circle cx="123.0" cy="240.8" r="4.5" fill="#7c3aed"><title>2023-03-31 00:00:00: 51,861.25</title></circle>
+<circle cx="140.5" cy="242.1" r="4.5" fill="#7c3aed"><title>2023-04-30 00:00:00: 48,640.50</title></circle>
+<circle cx="158.0" cy="230.2" r="4.5" fill="#7c3aed"><title>2023-05-31 00:00:00: 79,159.88</title></circle>
+<circle cx="175.6" cy="224.1" r="4.5" fill="#7c3aed"><title>2023-06-30 00:00:00: 95,087.00</title></circle>
+<circle cx="193.1" cy="196.7" r="4.5" fill="#7c3aed"><title>2023-07-31 00:00:00: 165,839.12</title></circle>
+<circle cx="210.6" cy="188.3" r="4.5" fill="#7c3aed"><title>2023-08-31 00:00:00: 187,422.50</title></circle>
+<circle cx="228.1" cy="175.6" r="4.5" fill="#7c3aed"><title>2023-09-30 00:00:00: 220,361.88</title></circle>
+<circle cx="245.6" cy="136.6" r="4.5" fill="#7c3aed"><title>2023-10-31 00:00:00: 321,123.88</title></circle>
+<circle cx="263.1" cy="122.4" r="4.5" fill="#7c3aed"><title>2023-11-30 00:00:00: 357,578.38</title></circle>
+<circle cx="280.6" cy="117.4" r="4.5" fill="#7c3aed"><title>2023-12-31 00:00:00: 370,494.88</title></circle>
+<circle cx="298.1" cy="105.3" r="4.5" fill="#7c3aed"><title>2024-01-31 00:00:00: 401,808.00</title></circle>
+<circle cx="315.6" cy="110.1" r="4.5" fill="#7c3aed"><title>2024-02-29 00:00:00: 389,363.25</title></circle>
+<circle cx="333.2" cy="114.3" r="4.5" fill="#7c3aed"><title>2024-03-31 00:00:00: 378,582.25</title></circle>
+<circle cx="350.7" cy="100.9" r="4.5" fill="#7c3aed"><title>2024-04-30 00:00:00: 413,222.38</title></circle>
+<circle cx="368.2" cy="93.6" r="4.5" fill="#7c3aed"><title>2024-05-31 00:00:00: 432,169.62</title></circle>
+<circle cx="385.7" cy="121.6" r="4.5" fill="#7c3aed"><title>2024-06-30 00:00:00: 359,654.62</title></circle>
+<circle cx="403.2" cy="125.5" r="4.5" fill="#7c3aed"><title>2024-07-31 00:00:00: 349,615.12</title></circle>
+<circle cx="420.7" cy="130.1" r="4.5" fill="#7c3aed"><title>2024-08-31 00:00:00: 337,811.12</title></circle>
+<circle cx="438.2" cy="155.3" r="4.5" fill="#7c3aed"><title>2024-09-30 00:00:00: 272,634.62</title></circle>
+<circle cx="455.7" cy="150.8" r="4.5" fill="#7c3aed"><title>2024-10-31 00:00:00: 284,390.25</title></circle>
+<circle cx="473.2" cy="167.1" r="4.5" fill="#7c3aed"><title>2024-11-30 00:00:00: 242,248.62</title></circle>
+<circle cx="490.8" cy="150.4" r="4.5" fill="#7c3aed"><title>2024-12-31 00:00:00: 285,263.38</title></circle>
+<circle cx="508.3" cy="99.0" r="4.5" fill="#7c3aed"><title>2025-01-31 00:00:00: 418,198.00</title></circle>
+<circle cx="525.8" cy="108.8" r="4.5" fill="#7c3aed"><title>2025-02-28 00:00:00: 392,927.00</title></circle>
+<circle cx="543.3" cy="111.0" r="4.5" fill="#7c3aed"><title>2025-03-31 00:00:00: 387,199.75</title></circle>
+<circle cx="560.8" cy="103.7" r="4.5" fill="#7c3aed"><title>2025-04-30 00:00:00: 406,050.00</title></circle>
+<circle cx="578.3" cy="102.2" r="4.5" fill="#7c3aed"><title>2025-05-31 00:00:00: 409,815.38</title></circle>
+<circle cx="595.8" cy="119.2" r="4.5" fill="#7c3aed"><title>2025-06-30 00:00:00: 365,963.25</title></circle>
+<circle cx="613.3" cy="106.0" r="4.5" fill="#7c3aed"><title>2025-07-31 00:00:00: 399,971.88</title></circle>
+<circle cx="630.8" cy="83.9" r="4.5" fill="#7c3aed"><title>2025-08-31 00:00:00: 457,113.88</title></circle>
+<circle cx="648.4" cy="77.3" r="4.5" fill="#7c3aed"><title>2025-09-30 00:00:00: 474,238.88</title></circle>
+<circle cx="665.9" cy="95.5" r="4.5" fill="#7c3aed"><title>2025-10-31 00:00:00: 427,128.62</title></circle>
+<circle cx="683.4" cy="118.1" r="4.5" fill="#7c3aed"><title>2025-11-30 00:00:00: 368,691.12</title></circle>
+<circle cx="700.9" cy="112.1" r="4.5" fill="#7c3aed"><title>2025-12-31 00:00:00: 384,363.50</title></circle>
+<circle cx="718.4" cy="106.0" r="4.5" fill="#7c3aed"><title>2026-01-31 00:00:00: 400,068.50</title></circle>
+<circle cx="735.9" cy="105.0" r="4.5" fill="#7c3aed"><title>2026-02-28 00:00:00: 402,662.62</title></circle>
+<circle cx="753.4" cy="99.4" r="4.5" fill="#7c3aed"><title>2026-03-31 00:00:00: 416,997.25</title></circle>
+<circle cx="770.9" cy="128.1" r="4.5" fill="#7c3aed"><title>2026-04-30 00:00:00: 342,872.25</title></circle>
+<circle cx="788.4" cy="116.0" r="4.5" fill="#7c3aed"><title>2026-05-31 00:00:00: 374,190.25</title></circle>
+<circle cx="806.0" cy="117.4" r="4.5" fill="#7c3aed"><title>2026-06-30 00:00:00: 370,622.00</title></circle>
+<circle cx="823.5" cy="109.1" r="4.5" fill="#7c3aed"><title>2026-07-31 00:00:00: 391,926.62</title></circle>
+<circle cx="841.0" cy="126.2" r="4.5" fill="#7c3aed"><title>2026-08-31 00:00:00: 347,792.00</title></circle>
+<circle cx="858.5" cy="112.2" r="4.5" fill="#7c3aed"><title>2026-09-30 00:00:00: 384,137.25</title></circle>
+<circle cx="876.0" cy="111.3" r="4.5" fill="#7c3aed"><title>2026-10-31 00:00:00: 386,400.88</title></circle>
+<line x1="88.0" y1="425" x2="108.0" y2="425" stroke="#7c3aed" stroke-width="3"/>
+<text x="114.0" y="429" class="legend">Revision-only</text>
+<polyline points="88.0,306.4 105.5,288.4 123.0,292.6 140.5,268.6 158.0,262.4 175.6,275.5 193.1,265.1 210.6,256.9 228.1,231.0 245.6,278.4 263.1,273.9 280.6,276.4 298.1,280.3 315.6,273.0 333.2,278.1 350.7,261.9 368.2,250.1 385.7,229.2 403.2,231.5 420.7,205.2 438.2,211.5 455.7,215.5 473.2,219.5 490.8,207.5 508.3,198.7 525.8,178.4 543.3,174.9 560.8,165.0 578.3,168.0 595.8,149.7 613.3,147.0 630.8,152.2 648.4,138.4 665.9,161.1 683.4,165.0 700.9,173.9 718.4,190.4 735.9,188.3 753.4,199.5 770.9,210.2 788.4,215.3 806.0,199.0 823.5,191.7 841.0,211.3 858.5,178.7 876.0,179.0" fill="none" stroke="#2563eb" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="306.4" r="4.5" fill="#2563eb"><title>2023-01-31 00:00:00: -117,468.88</title></circle>
+<circle cx="105.5" cy="288.4" r="4.5" fill="#2563eb"><title>2023-02-28 00:00:00: -71,150.00</title></circle>
+<circle cx="123.0" cy="292.6" r="4.5" fill="#2563eb"><title>2023-03-31 00:00:00: -81,876.12</title></circle>
+<circle cx="140.5" cy="268.6" r="4.5" fill="#2563eb"><title>2023-04-30 00:00:00: -19,836.00</title></circle>
+<circle cx="158.0" cy="262.4" r="4.5" fill="#2563eb"><title>2023-05-31 00:00:00: -3,871.25</title></circle>
+<circle cx="175.6" cy="275.5" r="4.5" fill="#2563eb"><title>2023-06-30 00:00:00: -37,648.88</title></circle>
+<circle cx="193.1" cy="265.1" r="4.5" fill="#2563eb"><title>2023-07-31 00:00:00: -10,763.88</title></circle>
+<circle cx="210.6" cy="256.9" r="4.5" fill="#2563eb"><title>2023-08-31 00:00:00: 10,234.00</title></circle>
+<circle cx="228.1" cy="231.0" r="4.5" fill="#2563eb"><title>2023-09-30 00:00:00: 77,206.62</title></circle>
+<circle cx="245.6" cy="278.4" r="4.5" fill="#2563eb"><title>2023-10-31 00:00:00: -45,158.12</title></circle>
+<circle cx="263.1" cy="273.9" r="4.5" fill="#2563eb"><title>2023-11-30 00:00:00: -33,692.50</title></circle>
+<circle cx="280.6" cy="276.4" r="4.5" fill="#2563eb"><title>2023-12-31 00:00:00: -40,082.88</title></circle>
+<circle cx="298.1" cy="280.3" r="4.5" fill="#2563eb"><title>2024-01-31 00:00:00: -50,221.75</title></circle>
+<circle cx="315.6" cy="273.0" r="4.5" fill="#2563eb"><title>2024-02-29 00:00:00: -31,160.50</title></circle>
+<circle cx="333.2" cy="278.1" r="4.5" fill="#2563eb"><title>2024-03-31 00:00:00: -44,311.12</title></circle>
+<circle cx="350.7" cy="261.9" r="4.5" fill="#2563eb"><title>2024-04-30 00:00:00: -2,583.50</title></circle>
+<circle cx="368.2" cy="250.1" r="4.5" fill="#2563eb"><title>2024-05-31 00:00:00: 27,935.12</title></circle>
+<circle cx="385.7" cy="229.2" r="4.5" fill="#2563eb"><title>2024-06-30 00:00:00: 81,892.75</title></circle>
+<circle cx="403.2" cy="231.5" r="4.5" fill="#2563eb"><title>2024-07-31 00:00:00: 76,025.50</title></circle>
+<circle cx="420.7" cy="205.2" r="4.5" fill="#2563eb"><title>2024-08-31 00:00:00: 143,831.50</title></circle>
+<circle cx="438.2" cy="211.5" r="4.5" fill="#2563eb"><title>2024-09-30 00:00:00: 127,551.25</title></circle>
+<circle cx="455.7" cy="215.5" r="4.5" fill="#2563eb"><title>2024-10-31 00:00:00: 117,281.75</title></circle>
+<circle cx="473.2" cy="219.5" r="4.5" fill="#2563eb"><title>2024-11-30 00:00:00: 107,012.50</title></circle>
+<circle cx="490.8" cy="207.5" r="4.5" fill="#2563eb"><title>2024-12-31 00:00:00: 137,797.88</title></circle>
+<circle cx="508.3" cy="198.7" r="4.5" fill="#2563eb"><title>2025-01-31 00:00:00: 160,533.00</title></circle>
+<circle cx="525.8" cy="178.4" r="4.5" fill="#2563eb"><title>2025-02-28 00:00:00: 213,184.00</title></circle>
+<circle cx="543.3" cy="174.9" r="4.5" fill="#2563eb"><title>2025-03-31 00:00:00: 222,161.25</title></circle>
+<circle cx="560.8" cy="165.0" r="4.5" fill="#2563eb"><title>2025-04-30 00:00:00: 247,736.88</title></circle>
+<circle cx="578.3" cy="168.0" r="4.5" fill="#2563eb"><title>2025-05-31 00:00:00: 239,853.38</title></circle>
+<circle cx="595.8" cy="149.7" r="4.5" fill="#2563eb"><title>2025-06-30 00:00:00: 287,270.75</title></circle>
+<circle cx="613.3" cy="147.0" r="4.5" fill="#2563eb"><title>2025-07-31 00:00:00: 294,236.88</title></circle>
+<circle cx="630.8" cy="152.2" r="4.5" fill="#2563eb"><title>2025-08-31 00:00:00: 280,770.25</title></circle>
+<circle cx="648.4" cy="138.4" r="4.5" fill="#2563eb"><title>2025-09-30 00:00:00: 316,311.50</title></circle>
+<circle cx="665.9" cy="161.1" r="4.5" fill="#2563eb"><title>2025-10-31 00:00:00: 257,691.75</title></circle>
+<circle cx="683.4" cy="165.0" r="4.5" fill="#2563eb"><title>2025-11-30 00:00:00: 247,743.50</title></circle>
+<circle cx="700.9" cy="173.9" r="4.5" fill="#2563eb"><title>2025-12-31 00:00:00: 224,697.38</title></circle>
+<circle cx="718.4" cy="190.4" r="4.5" fill="#2563eb"><title>2026-01-31 00:00:00: 182,095.75</title></circle>
+<circle cx="735.9" cy="188.3" r="4.5" fill="#2563eb"><title>2026-02-28 00:00:00: 187,620.75</title></circle>
+<circle cx="753.4" cy="199.5" r="4.5" fill="#2563eb"><title>2026-03-31 00:00:00: 158,462.12</title></circle>
+<circle cx="770.9" cy="210.2" r="4.5" fill="#2563eb"><title>2026-04-30 00:00:00: 130,882.38</title></circle>
+<circle cx="788.4" cy="215.3" r="4.5" fill="#2563eb"><title>2026-05-31 00:00:00: 117,766.75</title></circle>
+<circle cx="806.0" cy="199.0" r="4.5" fill="#2563eb"><title>2026-06-30 00:00:00: 159,961.12</title></circle>
+<circle cx="823.5" cy="191.7" r="4.5" fill="#2563eb"><title>2026-07-31 00:00:00: 178,624.62</title></circle>
+<circle cx="841.0" cy="211.3" r="4.5" fill="#2563eb"><title>2026-08-31 00:00:00: 128,138.00</title></circle>
+<circle cx="858.5" cy="178.7" r="4.5" fill="#2563eb"><title>2026-09-30 00:00:00: 212,244.50</title></circle>
+<circle cx="876.0" cy="179.0" r="4.5" fill="#2563eb"><title>2026-10-31 00:00:00: 211,403.25</title></circle>
+<line x1="350.6666666666667" y1="425" x2="370.6666666666667" y2="425" stroke="#2563eb" stroke-width="3"/>
+<text x="376.6666666666667" y="429" class="legend">Wind held</text>
+<polyline points="88.0,306.4 105.5,288.4 123.0,292.6 140.5,268.8 158.0,262.6 175.6,275.6 193.1,265.8 210.6,259.0 228.1,233.4 245.6,279.8 263.1,274.1 280.6,275.4 298.1,279.1 315.6,272.0 333.2,276.8 350.7,260.5 368.2,249.1 385.7,228.0 403.2,230.1 420.7,205.1 438.2,209.8 455.7,213.4 473.2,217.5 490.8,205.1 508.3,196.1 525.8,175.1 543.3,172.0 560.8,162.1 578.3,165.5 595.8,146.4 613.3,144.0 630.8,149.2 648.4,135.8 665.9,158.8 683.4,162.9 700.9,172.9 718.4,189.2 735.9,186.3 753.4,196.9 770.9,207.8 788.4,211.5 806.0,194.5 823.5,184.6 841.0,209.8 858.5,178.1 876.0,178.1" fill="none" stroke="#059669" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="306.4" r="4.5" fill="#059669"><title>2023-01-31 00:00:00: -117,468.88</title></circle>
+<circle cx="105.5" cy="288.4" r="4.5" fill="#059669"><title>2023-02-28 00:00:00: -71,150.00</title></circle>
+<circle cx="123.0" cy="292.6" r="4.5" fill="#059669"><title>2023-03-31 00:00:00: -81,876.12</title></circle>
+<circle cx="140.5" cy="268.8" r="4.5" fill="#059669"><title>2023-04-30 00:00:00: -20,349.75</title></circle>
+<circle cx="158.0" cy="262.6" r="4.5" fill="#059669"><title>2023-05-31 00:00:00: -4,424.12</title></circle>
+<circle cx="175.6" cy="275.6" r="4.5" fill="#059669"><title>2023-06-30 00:00:00: -37,941.75</title></circle>
+<circle cx="193.1" cy="265.8" r="4.5" fill="#059669"><title>2023-07-31 00:00:00: -12,652.38</title></circle>
+<circle cx="210.6" cy="259.0" r="4.5" fill="#059669"><title>2023-08-31 00:00:00: 4,913.25</title></circle>
+<circle cx="228.1" cy="233.4" r="4.5" fill="#059669"><title>2023-09-30 00:00:00: 70,950.88</title></circle>
+<circle cx="245.6" cy="279.8" r="4.5" fill="#059669"><title>2023-10-31 00:00:00: -48,863.38</title></circle>
+<circle cx="263.1" cy="274.1" r="4.5" fill="#059669"><title>2023-11-30 00:00:00: -33,984.00</title></circle>
+<circle cx="280.6" cy="275.4" r="4.5" fill="#059669"><title>2023-12-31 00:00:00: -37,528.00</title></circle>
+<circle cx="298.1" cy="279.1" r="4.5" fill="#059669"><title>2024-01-31 00:00:00: -47,026.12</title></circle>
+<circle cx="315.6" cy="272.0" r="4.5" fill="#059669"><title>2024-02-29 00:00:00: -28,670.38</title></circle>
+<circle cx="333.2" cy="276.8" r="4.5" fill="#059669"><title>2024-03-31 00:00:00: -41,175.75</title></circle>
+<circle cx="350.7" cy="260.5" r="4.5" fill="#059669"><title>2024-04-30 00:00:00: 1,004.75</title></circle>
+<circle cx="368.2" cy="249.1" r="4.5" fill="#059669"><title>2024-05-31 00:00:00: 30,591.50</title></circle>
+<circle cx="385.7" cy="228.0" r="4.5" fill="#059669"><title>2024-06-30 00:00:00: 84,865.12</title></circle>
+<circle cx="403.2" cy="230.1" r="4.5" fill="#059669"><title>2024-07-31 00:00:00: 79,474.88</title></circle>
+<circle cx="420.7" cy="205.1" r="4.5" fill="#059669"><title>2024-08-31 00:00:00: 144,128.12</title></circle>
+<circle cx="438.2" cy="209.8" r="4.5" fill="#059669"><title>2024-09-30 00:00:00: 131,887.75</title></circle>
+<circle cx="455.7" cy="213.4" r="4.5" fill="#059669"><title>2024-10-31 00:00:00: 122,654.88</title></circle>
+<circle cx="473.2" cy="217.5" r="4.5" fill="#059669"><title>2024-11-30 00:00:00: 112,118.12</title></circle>
+<circle cx="490.8" cy="205.1" r="4.5" fill="#059669"><title>2024-12-31 00:00:00: 144,051.62</title></circle>
+<circle cx="508.3" cy="196.1" r="4.5" fill="#059669"><title>2025-01-31 00:00:00: 167,467.75</title></circle>
+<circle cx="525.8" cy="175.1" r="4.5" fill="#059669"><title>2025-02-28 00:00:00: 221,480.00</title></circle>
+<circle cx="543.3" cy="172.0" r="4.5" fill="#059669"><title>2025-03-31 00:00:00: 229,569.75</title></circle>
+<circle cx="560.8" cy="162.1" r="4.5" fill="#059669"><title>2025-04-30 00:00:00: 255,276.50</title></circle>
+<circle cx="578.3" cy="165.5" r="4.5" fill="#059669"><title>2025-05-31 00:00:00: 246,454.50</title></circle>
+<circle cx="595.8" cy="146.4" r="4.5" fill="#059669"><title>2025-06-30 00:00:00: 295,631.00</title></circle>
+<circle cx="613.3" cy="144.0" r="4.5" fill="#059669"><title>2025-07-31 00:00:00: 301,814.38</title></circle>
+<circle cx="630.8" cy="149.2" r="4.5" fill="#059669"><title>2025-08-31 00:00:00: 288,558.12</title></circle>
+<circle cx="648.4" cy="135.8" r="4.5" fill="#059669"><title>2025-09-30 00:00:00: 323,142.50</title></circle>
+<circle cx="665.9" cy="158.8" r="4.5" fill="#059669"><title>2025-10-31 00:00:00: 263,599.50</title></circle>
+<circle cx="683.4" cy="162.9" r="4.5" fill="#059669"><title>2025-11-30 00:00:00: 253,106.25</title></circle>
+<circle cx="700.9" cy="172.9" r="4.5" fill="#059669"><title>2025-12-31 00:00:00: 227,259.00</title></circle>
+<circle cx="718.4" cy="189.2" r="4.5" fill="#059669"><title>2026-01-31 00:00:00: 185,086.38</title></circle>
+<circle cx="735.9" cy="186.3" r="4.5" fill="#059669"><title>2026-02-28 00:00:00: 192,552.38</title></circle>
+<circle cx="753.4" cy="196.9" r="4.5" fill="#059669"><title>2026-03-31 00:00:00: 165,211.12</title></circle>
+<circle cx="770.9" cy="207.8" r="4.5" fill="#059669"><title>2026-04-30 00:00:00: 137,173.75</title></circle>
+<circle cx="788.4" cy="211.5" r="4.5" fill="#059669"><title>2026-05-31 00:00:00: 127,532.38</title></circle>
+<circle cx="806.0" cy="194.5" r="4.5" fill="#059669"><title>2026-06-30 00:00:00: 171,535.62</title></circle>
+<circle cx="823.5" cy="184.6" r="4.5" fill="#059669"><title>2026-07-31 00:00:00: 197,143.25</title></circle>
+<circle cx="841.0" cy="209.8" r="4.5" fill="#059669"><title>2026-08-31 00:00:00: 131,951.12</title></circle>
+<circle cx="858.5" cy="178.1" r="4.5" fill="#059669"><title>2026-09-30 00:00:00: 213,861.12</title></circle>
+<circle cx="876.0" cy="178.1" r="4.5" fill="#059669"><title>2026-10-31 00:00:00: 213,893.25</title></circle>
+<line x1="613.3333333333334" y1="425" x2="633.3333333333334" y2="425" stroke="#059669" stroke-width="3"/>
+<text x="639.3333333333334" y="429" class="legend">Wind + solar held</text>
+<polyline points="88.0,263.2 105.5,251.1 123.0,264.0 140.5,263.0 158.0,250.4 175.6,245.4 193.1,220.5 210.6,211.6 228.1,196.7 245.6,165.7 263.1,156.8 280.6,151.3 298.1,137.8 315.6,140.2 333.2,146.7 350.7,133.3 368.2,120.2 385.7,143.1 403.2,143.1 420.7,145.5 438.2,176.7 455.7,171.3 473.2,186.3 490.8,169.4 508.3,121.8 525.8,130.8 543.3,136.2 560.8,131.6 578.3,133.8 595.8,156.1 613.3,142.9 630.8,118.7 648.4,111.8 665.9,136.8 683.4,161.3 700.9,154.6 718.4,149.4 735.9,152.1 753.4,155.2 770.9,183.3 788.4,171.7 806.0,171.5 823.5,160.8 841.0,181.2 858.5,163.7 876.0,162.9" fill="none" stroke="#d97706" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="263.2" r="4.5" fill="#d97706"><title>2023-01-31 00:00:00: -5,994.75</title></circle>
+<circle cx="105.5" cy="251.1" r="4.5" fill="#d97706"><title>2023-02-28 00:00:00: 25,303.63</title></circle>
+<circle cx="123.0" cy="264.0" r="4.5" fill="#d97706"><title>2023-03-31 00:00:00: -8,081.12</title></circle>
+<circle cx="140.5" cy="263.0" r="4.5" fill="#d97706"><title>2023-04-30 00:00:00: -5,498.25</title></circle>
+<circle cx="158.0" cy="250.4" r="4.5" fill="#d97706"><title>2023-05-31 00:00:00: 27,136.75</title></circle>
+<circle cx="175.6" cy="245.4" r="4.5" fill="#d97706"><title>2023-06-30 00:00:00: 39,998.25</title></circle>
+<circle cx="193.1" cy="220.5" r="4.5" fill="#d97706"><title>2023-07-31 00:00:00: 104,355.88</title></circle>
+<circle cx="210.6" cy="211.6" r="4.5" fill="#d97706"><title>2023-08-31 00:00:00: 127,439.12</title></circle>
+<circle cx="228.1" cy="196.7" r="4.5" fill="#d97706"><title>2023-09-30 00:00:00: 165,691.00</title></circle>
+<circle cx="245.6" cy="165.7" r="4.5" fill="#d97706"><title>2023-10-31 00:00:00: 245,983.88</title></circle>
+<circle cx="263.1" cy="156.8" r="4.5" fill="#d97706"><title>2023-11-30 00:00:00: 268,971.75</title></circle>
+<circle cx="280.6" cy="151.3" r="4.5" fill="#d97706"><title>2023-12-31 00:00:00: 283,139.12</title></circle>
+<circle cx="298.1" cy="137.8" r="4.5" fill="#d97706"><title>2024-01-31 00:00:00: 317,821.25</title></circle>
+<circle cx="315.6" cy="140.2" r="4.5" fill="#d97706"><title>2024-02-29 00:00:00: 311,620.50</title></circle>
+<circle cx="333.2" cy="146.7" r="4.5" fill="#d97706"><title>2024-03-31 00:00:00: 295,033.25</title></circle>
+<circle cx="350.7" cy="133.3" r="4.5" fill="#d97706"><title>2024-04-30 00:00:00: 329,527.12</title></circle>
+<circle cx="368.2" cy="120.2" r="4.5" fill="#d97706"><title>2024-05-31 00:00:00: 363,414.62</title></circle>
+<circle cx="385.7" cy="143.1" r="4.5" fill="#d97706"><title>2024-06-30 00:00:00: 304,109.00</title></circle>
+<circle cx="403.2" cy="143.1" r="4.5" fill="#d97706"><title>2024-07-31 00:00:00: 304,357.75</title></circle>
+<circle cx="420.7" cy="145.5" r="4.5" fill="#d97706"><title>2024-08-31 00:00:00: 297,955.12</title></circle>
+<circle cx="438.2" cy="176.7" r="4.5" fill="#d97706"><title>2024-09-30 00:00:00: 217,490.50</title></circle>
+<circle cx="455.7" cy="171.3" r="4.5" fill="#d97706"><title>2024-10-31 00:00:00: 231,407.38</title></circle>
+<circle cx="473.2" cy="186.3" r="4.5" fill="#d97706"><title>2024-11-30 00:00:00: 192,678.62</title></circle>
+<circle cx="490.8" cy="169.4" r="4.5" fill="#d97706"><title>2024-12-31 00:00:00: 236,358.88</title></circle>
+<circle cx="508.3" cy="121.8" r="4.5" fill="#d97706"><title>2025-01-31 00:00:00: 359,281.50</title></circle>
+<circle cx="525.8" cy="130.8" r="4.5" fill="#d97706"><title>2025-02-28 00:00:00: 335,961.00</title></circle>
+<circle cx="543.3" cy="136.2" r="4.5" fill="#d97706"><title>2025-03-31 00:00:00: 322,059.62</title></circle>
+<circle cx="560.8" cy="131.6" r="4.5" fill="#d97706"><title>2025-04-30 00:00:00: 333,924.00</title></circle>
+<circle cx="578.3" cy="133.8" r="4.5" fill="#d97706"><title>2025-05-31 00:00:00: 328,251.38</title></circle>
+<circle cx="595.8" cy="156.1" r="4.5" fill="#d97706"><title>2025-06-30 00:00:00: 270,767.00</title></circle>
+<circle cx="613.3" cy="142.9" r="4.5" fill="#d97706"><title>2025-07-31 00:00:00: 304,739.12</title></circle>
+<circle cx="630.8" cy="118.7" r="4.5" fill="#d97706"><title>2025-08-31 00:00:00: 367,326.38</title></circle>
+<circle cx="648.4" cy="111.8" r="4.5" fill="#d97706"><title>2025-09-30 00:00:00: 385,131.12</title></circle>
+<circle cx="665.9" cy="136.8" r="4.5" fill="#d97706"><title>2025-10-31 00:00:00: 320,389.50</title></circle>
+<circle cx="683.4" cy="161.3" r="4.5" fill="#d97706"><title>2025-11-30 00:00:00: 257,320.25</title></circle>
+<circle cx="700.9" cy="154.6" r="4.5" fill="#d97706"><title>2025-12-31 00:00:00: 274,554.12</title></circle>
+<circle cx="718.4" cy="149.4" r="4.5" fill="#d97706"><title>2026-01-31 00:00:00: 288,052.38</title></circle>
+<circle cx="735.9" cy="152.1" r="4.5" fill="#d97706"><title>2026-02-28 00:00:00: 280,968.50</title></circle>
+<circle cx="753.4" cy="155.2" r="4.5" fill="#d97706"><title>2026-03-31 00:00:00: 272,920.88</title></circle>
+<circle cx="770.9" cy="183.3" r="4.5" fill="#d97706"><title>2026-04-30 00:00:00: 200,516.38</title></circle>
+<circle cx="788.4" cy="171.7" r="4.5" fill="#d97706"><title>2026-05-31 00:00:00: 230,366.25</title></circle>
+<circle cx="806.0" cy="171.5" r="4.5" fill="#d97706"><title>2026-06-30 00:00:00: 230,819.12</title></circle>
+<circle cx="823.5" cy="160.8" r="4.5" fill="#d97706"><title>2026-07-31 00:00:00: 258,630.50</title></circle>
+<circle cx="841.0" cy="181.2" r="4.5" fill="#d97706"><title>2026-08-31 00:00:00: 205,951.00</title></circle>
+<circle cx="858.5" cy="163.7" r="4.5" fill="#d97706"><title>2026-09-30 00:00:00: 250,981.38</title></circle>
+<circle cx="876.0" cy="162.9" r="4.5" fill="#d97706"><title>2026-10-31 00:00:00: 253,111.38</title></circle>
+<line x1="88.0" y1="443" x2="108.0" y2="443" stroke="#d97706" stroke-width="3"/>
+<text x="114.0" y="447" class="legend">Combined wind/revision</text>
+<polyline points="88.0,263.2 105.5,251.1 123.0,264.0 140.5,263.0 158.0,250.4 175.6,245.5 193.1,220.9 210.6,211.9 228.1,197.0 245.6,166.0 263.1,156.8 280.6,151.4 298.1,138.1 315.6,140.4 333.2,146.9 350.7,133.5 368.2,120.3 385.7,143.4 403.2,143.3 420.7,146.1 438.2,177.1 455.7,171.1 473.2,186.2 490.8,169.2 508.3,121.7 525.8,130.8 543.3,136.2 560.8,131.6 578.3,134.2 595.8,156.5 613.3,143.2 630.8,119.0 648.4,112.2 665.9,137.1 683.4,161.6 700.9,155.2 718.4,149.8 735.9,152.4 753.4,155.4 770.9,183.4 788.4,171.7 806.0,171.0 823.5,160.6 841.0,181.1 858.5,163.8 876.0,163.3" fill="none" stroke="#dc2626" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="263.2" r="4.5" fill="#dc2626"><title>2023-01-31 00:00:00: -5,994.75</title></circle>
+<circle cx="105.5" cy="251.1" r="4.5" fill="#dc2626"><title>2023-02-28 00:00:00: 25,303.63</title></circle>
+<circle cx="123.0" cy="264.0" r="4.5" fill="#dc2626"><title>2023-03-31 00:00:00: -8,081.12</title></circle>
+<circle cx="140.5" cy="263.0" r="4.5" fill="#dc2626"><title>2023-04-30 00:00:00: -5,378.25</title></circle>
+<circle cx="158.0" cy="250.4" r="4.5" fill="#dc2626"><title>2023-05-31 00:00:00: 27,118.00</title></circle>
+<circle cx="175.6" cy="245.5" r="4.5" fill="#dc2626"><title>2023-06-30 00:00:00: 39,878.25</title></circle>
+<circle cx="193.1" cy="220.9" r="4.5" fill="#dc2626"><title>2023-07-31 00:00:00: 103,427.12</title></circle>
+<circle cx="210.6" cy="211.9" r="4.5" fill="#dc2626"><title>2023-08-31 00:00:00: 126,562.88</title></circle>
+<circle cx="228.1" cy="197.0" r="4.5" fill="#dc2626"><title>2023-09-30 00:00:00: 165,006.00</title></circle>
+<circle cx="245.6" cy="166.0" r="4.5" fill="#dc2626"><title>2023-10-31 00:00:00: 245,112.62</title></circle>
+<circle cx="263.1" cy="156.8" r="4.5" fill="#dc2626"><title>2023-11-30 00:00:00: 268,759.25</title></circle>
+<circle cx="280.6" cy="151.4" r="4.5" fill="#dc2626"><title>2023-12-31 00:00:00: 282,687.88</title></circle>
+<circle cx="298.1" cy="138.1" r="4.5" fill="#dc2626"><title>2024-01-31 00:00:00: 317,275.00</title></circle>
+<circle cx="315.6" cy="140.4" r="4.5" fill="#dc2626"><title>2024-02-29 00:00:00: 311,145.50</title></circle>
+<circle cx="333.2" cy="146.9" r="4.5" fill="#dc2626"><title>2024-03-31 00:00:00: 294,425.75</title></circle>
+<circle cx="350.7" cy="133.5" r="4.5" fill="#dc2626"><title>2024-04-30 00:00:00: 329,021.75</title></circle>
+<circle cx="368.2" cy="120.3" r="4.5" fill="#dc2626"><title>2024-05-31 00:00:00: 363,011.75</title></circle>
+<circle cx="385.7" cy="143.4" r="4.5" fill="#dc2626"><title>2024-06-30 00:00:00: 303,436.12</title></circle>
+<circle cx="403.2" cy="143.3" r="4.5" fill="#dc2626"><title>2024-07-31 00:00:00: 303,669.62</title></circle>
+<circle cx="420.7" cy="146.1" r="4.5" fill="#dc2626"><title>2024-08-31 00:00:00: 296,574.50</title></circle>
+<circle cx="438.2" cy="177.1" r="4.5" fill="#dc2626"><title>2024-09-30 00:00:00: 216,343.38</title></circle>
+<circle cx="455.7" cy="171.1" r="4.5" fill="#dc2626"><title>2024-10-31 00:00:00: 231,917.88</title></circle>
+<circle cx="473.2" cy="186.2" r="4.5" fill="#dc2626"><title>2024-11-30 00:00:00: 193,044.12</title></circle>
+<circle cx="490.8" cy="169.2" r="4.5" fill="#dc2626"><title>2024-12-31 00:00:00: 236,733.12</title></circle>
+<circle cx="508.3" cy="121.7" r="4.5" fill="#dc2626"><title>2025-01-31 00:00:00: 359,535.75</title></circle>
+<circle cx="525.8" cy="130.8" r="4.5" fill="#dc2626"><title>2025-02-28 00:00:00: 335,911.62</title></circle>
+<circle cx="543.3" cy="136.2" r="4.5" fill="#dc2626"><title>2025-03-31 00:00:00: 322,029.38</title></circle>
+<circle cx="560.8" cy="131.6" r="4.5" fill="#dc2626"><title>2025-04-30 00:00:00: 333,834.50</title></circle>
+<circle cx="578.3" cy="134.2" r="4.5" fill="#dc2626"><title>2025-05-31 00:00:00: 327,339.25</title></circle>
+<circle cx="595.8" cy="156.5" r="4.5" fill="#dc2626"><title>2025-06-30 00:00:00: 269,569.25</title></circle>
+<circle cx="613.3" cy="143.2" r="4.5" fill="#dc2626"><title>2025-07-31 00:00:00: 303,949.12</title></circle>
+<circle cx="630.8" cy="119.0" r="4.5" fill="#dc2626"><title>2025-08-31 00:00:00: 366,603.38</title></circle>
+<circle cx="648.4" cy="112.2" r="4.5" fill="#dc2626"><title>2025-09-30 00:00:00: 384,141.88</title></circle>
+<circle cx="665.9" cy="137.1" r="4.5" fill="#dc2626"><title>2025-10-31 00:00:00: 319,689.62</title></circle>
+<circle cx="683.4" cy="161.6" r="4.5" fill="#dc2626"><title>2025-11-30 00:00:00: 256,396.00</title></circle>
+<circle cx="700.9" cy="155.2" r="4.5" fill="#dc2626"><title>2025-12-31 00:00:00: 273,024.00</title></circle>
+<circle cx="718.4" cy="149.8" r="4.5" fill="#dc2626"><title>2026-01-31 00:00:00: 286,943.38</title></circle>
+<circle cx="735.9" cy="152.4" r="4.5" fill="#dc2626"><title>2026-02-28 00:00:00: 280,174.00</title></circle>
+<circle cx="753.4" cy="155.4" r="4.5" fill="#dc2626"><title>2026-03-31 00:00:00: 272,357.38</title></circle>
+<circle cx="770.9" cy="183.4" r="4.5" fill="#dc2626"><title>2026-04-30 00:00:00: 200,201.75</title></circle>
+<circle cx="788.4" cy="171.7" r="4.5" fill="#dc2626"><title>2026-05-31 00:00:00: 230,260.00</title></circle>
+<circle cx="806.0" cy="171.0" r="4.5" fill="#dc2626"><title>2026-06-30 00:00:00: 232,289.12</title></circle>
+<circle cx="823.5" cy="160.6" r="4.5" fill="#dc2626"><title>2026-07-31 00:00:00: 259,029.38</title></circle>
+<circle cx="841.0" cy="181.1" r="4.5" fill="#dc2626"><title>2026-08-31 00:00:00: 205,966.62</title></circle>
+<circle cx="858.5" cy="163.8" r="4.5" fill="#dc2626"><title>2026-09-30 00:00:00: 250,772.50</title></circle>
+<circle cx="876.0" cy="163.3" r="4.5" fill="#dc2626"><title>2026-10-31 00:00:00: 252,114.62</title></circle>
+<line x1="350.6666666666667" y1="443" x2="370.6666666666667" y2="443" stroke="#dc2626" stroke-width="3"/>
+<text x="376.6666666666667" y="447" class="legend">Combined renewables/revision</text>
+<polyline points="88.0,275.3 105.5,270.9 123.0,355.7 140.5,326.5 158.0,289.0 175.6,332.8 193.1,324.7 210.6,298.4 228.1,278.1 245.6,333.0 263.1,300.3 280.6,299.9 298.1,307.4 315.6,296.2 333.2,313.5 350.7,280.9 368.2,274.3 385.7,258.9 403.2,271.1 420.7,249.9 438.2,262.7 455.7,248.7 473.2,225.3 490.8,202.7 508.3,235.9 525.8,203.2 543.3,196.9 560.8,170.2 578.3,173.9 595.8,185.9 613.3,182.9 630.8,185.4 648.4,174.0 665.9,216.8 683.4,202.0 700.9,203.8 718.4,242.9 735.9,239.7 753.4,245.5 770.9,250.4 788.4,238.0 806.0,217.4 823.5,211.4 841.0,238.6 858.5,199.6 876.0,196.9" fill="none" stroke="#475569" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="88.0" cy="275.3" r="4.5" fill="#475569"><title>2023-01-31 00:00:00: -37,196.25</title></circle>
+<circle cx="105.5" cy="270.9" r="4.5" fill="#475569"><title>2023-02-28 00:00:00: -25,756.38</title></circle>
+<circle cx="123.0" cy="355.7" r="4.5" fill="#475569"><title>2023-03-31 00:00:00: -244,913.62</title></circle>
+<circle cx="140.5" cy="326.5" r="4.5" fill="#475569"><title>2023-04-30 00:00:00: -169,477.00</title></circle>
+<circle cx="158.0" cy="289.0" r="4.5" fill="#475569"><title>2023-05-31 00:00:00: -72,605.50</title></circle>
+<circle cx="175.6" cy="332.8" r="4.5" fill="#475569"><title>2023-06-30 00:00:00: -185,749.62</title></circle>
+<circle cx="193.1" cy="324.7" r="4.5" fill="#475569"><title>2023-07-31 00:00:00: -164,793.75</title></circle>
+<circle cx="210.6" cy="298.4" r="4.5" fill="#475569"><title>2023-08-31 00:00:00: -96,761.00</title></circle>
+<circle cx="228.1" cy="278.1" r="4.5" fill="#475569"><title>2023-09-30 00:00:00: -44,515.62</title></circle>
+<circle cx="245.6" cy="333.0" r="4.5" fill="#475569"><title>2023-10-31 00:00:00: -186,114.75</title></circle>
+<circle cx="263.1" cy="300.3" r="4.5" fill="#475569"><title>2023-11-30 00:00:00: -101,759.12</title></circle>
+<circle cx="280.6" cy="299.9" r="4.5" fill="#475569"><title>2023-12-31 00:00:00: -100,850.75</title></circle>
+<circle cx="298.1" cy="307.4" r="4.5" fill="#475569"><title>2024-01-31 00:00:00: -120,026.00</title></circle>
+<circle cx="315.6" cy="296.2" r="4.5" fill="#475569"><title>2024-02-29 00:00:00: -91,182.62</title></circle>
+<circle cx="333.2" cy="313.5" r="4.5" fill="#475569"><title>2024-03-31 00:00:00: -135,929.50</title></circle>
+<circle cx="350.7" cy="280.9" r="4.5" fill="#475569"><title>2024-04-30 00:00:00: -51,571.25</title></circle>
+<circle cx="368.2" cy="274.3" r="4.5" fill="#475569"><title>2024-05-31 00:00:00: -34,746.00</title></circle>
+<circle cx="385.7" cy="258.9" r="4.5" fill="#475569"><title>2024-06-30 00:00:00: 5,078.12</title></circle>
+<circle cx="403.2" cy="271.1" r="4.5" fill="#475569"><title>2024-07-31 00:00:00: -26,381.88</title></circle>
+<circle cx="420.7" cy="249.9" r="4.5" fill="#475569"><title>2024-08-31 00:00:00: 28,483.62</title></circle>
+<circle cx="438.2" cy="262.7" r="4.5" fill="#475569"><title>2024-09-30 00:00:00: -4,564.88</title></circle>
+<circle cx="455.7" cy="248.7" r="4.5" fill="#475569"><title>2024-10-31 00:00:00: 31,573.00</title></circle>
+<circle cx="473.2" cy="225.3" r="4.5" fill="#475569"><title>2024-11-30 00:00:00: 91,889.50</title></circle>
+<circle cx="490.8" cy="202.7" r="4.5" fill="#475569"><title>2024-12-31 00:00:00: 150,430.12</title></circle>
+<circle cx="508.3" cy="235.9" r="4.5" fill="#475569"><title>2025-01-31 00:00:00: 64,592.50</title></circle>
+<circle cx="525.8" cy="203.2" r="4.5" fill="#475569"><title>2025-02-28 00:00:00: 148,957.62</title></circle>
+<circle cx="543.3" cy="196.9" r="4.5" fill="#475569"><title>2025-03-31 00:00:00: 165,363.25</title></circle>
+<circle cx="560.8" cy="170.2" r="4.5" fill="#475569"><title>2025-04-30 00:00:00: 234,348.75</title></circle>
+<circle cx="578.3" cy="173.9" r="4.5" fill="#475569"><title>2025-05-31 00:00:00: 224,569.25</title></circle>
+<circle cx="595.8" cy="185.9" r="4.5" fill="#475569"><title>2025-06-30 00:00:00: 193,625.38</title></circle>
+<circle cx="613.3" cy="182.9" r="4.5" fill="#475569"><title>2025-07-31 00:00:00: 201,551.50</title></circle>
+<circle cx="630.8" cy="185.4" r="4.5" fill="#475569"><title>2025-08-31 00:00:00: 194,859.38</title></circle>
+<circle cx="648.4" cy="174.0" r="4.5" fill="#475569"><title>2025-09-30 00:00:00: 224,388.62</title></circle>
+<circle cx="665.9" cy="216.8" r="4.5" fill="#475569"><title>2025-10-31 00:00:00: 113,799.75</title></circle>
+<circle cx="683.4" cy="202.0" r="4.5" fill="#475569"><title>2025-11-30 00:00:00: 152,112.62</title></circle>
+<circle cx="700.9" cy="203.8" r="4.5" fill="#475569"><title>2025-12-31 00:00:00: 147,574.50</title></circle>
+<circle cx="718.4" cy="242.9" r="4.5" fill="#475569"><title>2026-01-31 00:00:00: 46,456.38</title></circle>
+<circle cx="735.9" cy="239.7" r="4.5" fill="#475569"><title>2026-02-28 00:00:00: 54,618.25</title></circle>
+<circle cx="753.4" cy="245.5" r="4.5" fill="#475569"><title>2026-03-31 00:00:00: 39,740.00</title></circle>
+<circle cx="770.9" cy="250.4" r="4.5" fill="#475569"><title>2026-04-30 00:00:00: 27,042.25</title></circle>
+<circle cx="788.4" cy="238.0" r="4.5" fill="#475569"><title>2026-05-31 00:00:00: 59,032.00</title></circle>
+<circle cx="806.0" cy="217.4" r="4.5" fill="#475569"><title>2026-06-30 00:00:00: 112,436.87</title></circle>
+<circle cx="823.5" cy="211.4" r="4.5" fill="#475569"><title>2026-07-31 00:00:00: 127,821.25</title></circle>
+<circle cx="841.0" cy="238.6" r="4.5" fill="#475569"><title>2026-08-31 00:00:00: 57,594.75</title></circle>
+<circle cx="858.5" cy="199.6" r="4.5" fill="#475569"><title>2026-09-30 00:00:00: 158,356.25</title></circle>
+<circle cx="876.0" cy="196.9" r="4.5" fill="#475569"><title>2026-10-31 00:00:00: 165,239.62</title></circle>
+<line x1="613.3333333333334" y1="443" x2="633.3333333333334" y2="443" stroke="#475569" stroke-width="3"/>
+<text x="639.3333333333334" y="447" class="legend">Always short</text>
+<text x="88.0" y="398" text-anchor="middle" class="axis">2023-01</text>
+<text x="245.6" y="398" text-anchor="middle" class="axis">2023-10</text>
+<text x="403.2" y="398" text-anchor="middle" class="axis">2024-07</text>
+<text x="560.8" y="398" text-anchor="middle" class="axis">2025-04</text>
+<text x="718.4" y="398" text-anchor="middle" class="axis">2026-01</text>
+<text x="876.0" y="398" text-anchor="middle" class="axis">2026-10</text>
+</svg></div>
+<table><thead><tr><th>Strategy on Elexon overlap</th><th>Active days</th><th>Gross P/L</th><th>Profitable days</th><th>Daily Sharpe*</th><th>Max drawdown</th></tr></thead><tbody><tr><td>Elexon revision only</td><td>1,363</td><td>£386,401</td><td>50.9%</td><td>0.42</td><td>-£234,490</td></tr><tr><td>Wind 9am signal held</td><td>998</td><td>£211,403</td><td>37.1%</td><td>0.40</td><td>-£230,275</td></tr><tr><td>Wind + solar 9am signal held</td><td>1,009</td><td>£213,893</td><td>37.6%</td><td>0.40</td><td>-£226,794</td></tr><tr><td>Combined: wind 9am + revision</td><td>1,365</td><td>£253,111</td><td>51.0%</td><td>0.27</td><td>-£315,232</td></tr><tr><td>Combined: wind + solar 9am + revision</td><td>1,365</td><td>£252,115</td><td>51.0%</td><td>0.27</td><td>-£315,901</td></tr><tr><td>Always −25 MW, held</td><td>1,367</td><td>£165,240</td><td>51.9%</td><td>0.14</td><td>-£369,163</td></tr></tbody></table>
+<p>Elexon-matched sample: 65,452 half-hours across 1,367 days (2023-01-02 to 2026-10-02). The 9am and 3pm Elexon updates are wind-only, so the solar-inclusive base position is not revised by a separate solar update. The revision rule is unstable by year, so its full-sample profit should not be read as a repeatable edge.</p>
+
+<h2>Threshold sensitivity and yearly P/L</h2>
+<table><thead><tr><th>Rule / threshold</th><th>Gross P/L</th><th>Profitable days</th><th>Max drawdown</th></tr></thead><tbody><tr><td>Wind ≥20%, held</td><td>£741,674</td><td>32.6%</td><td>-£518,672</td></tr><tr><td>Wind ≥30%, held</td><td>£583,238</td><td>23.4%</td><td>-£408,755</td></tr><tr><td>Wind ≥40%, held</td><td>£5,712</td><td>14.6%</td><td>-£226,295</td></tr><tr><td>Solar share ≥0.5%</td><td>-£79,679</td><td>9.5%</td><td>-£233,987</td></tr><tr><td>Nuclear share ≥20%</td><td>£575,566</td><td>37.5%</td><td>-£173,916</td></tr><tr><td>Wind + solar ≥30%</td><td>£585,728</td><td>23.6%</td><td>-£408,755</td></tr><tr><td>Wind + solar + nuclear ≥45%</td><td>£510,137</td><td>29.8%</td><td>-£406,786</td></tr><tr><td>Combined, |revision| &gt; 0 MW</td><td>£253,111</td><td>51.0%</td><td>-£315,232</td></tr><tr><td>Combined, |revision| &gt; 250 MW</td><td>£166,748</td><td>46.6%</td><td>-£244,471</td></tr><tr><td>Combined, |revision| &gt; 500 MW</td><td>£215,334</td><td>43.6%</td><td>-£260,053</td></tr><tr><td>Combined, |revision| &gt; 1,000 MW</td><td>£257,642</td><td>39.1%</td><td>-£216,020</td></tr></tbody></table>
+<p>Changing the 9am wind threshold from 20% to 30% to 40% materially changes gross P/L. Revision magnitude cutoffs likewise change trade frequency and risk; the reported 30% / sign-only result is not a threshold search or selected optimum.</p>
+<table><thead><tr><th>Year</th><th>Sample</th><th>Wind</th><th>Solar</th><th>Nuclear</th><th>Wind + solar</th><th>Wind + solar + nuclear</th><th>Always short</th><th>Revision only</th><th>Combined</th></tr></thead><tbody><tr><td>2016</td><td>Full data</td><td>-£543</td><td>£0</td><td>£55,256</td><td>-£543</td><td>£10,934</td><td>£219,331</td><td>—</td><td>—</td></tr><tr><td>2017</td><td>Full data</td><td>£22,024</td><td>£0</td><td>£168,110</td><td>£22,024</td><td>£20,074</td><td>£209,666</td><td>—</td><td>—</td></tr><tr><td>2018</td><td>Full data</td><td>£13,979</td><td>£0</td><td>£43,828</td><td>£13,979</td><td>-£73,146</td><td>£18,762</td><td>—</td><td>—</td></tr><tr><td>2019</td><td>Full data</td><td>£22,999</td><td>£0</td><td>£14,659</td><td>£22,999</td><td>£11,864</td><td>£185,468</td><td>—</td><td>—</td></tr><tr><td>2020</td><td>Full data</td><td>£1,101</td><td>£0</td><td>-£35,333</td><td>£1,101</td><td>£3,648</td><td>£45,110</td><td>—</td><td>—</td></tr><tr><td>2021</td><td>Full data</td><td>£67,414</td><td>£0</td><td>-£4,344</td><td>£67,414</td><td>£141,992</td><td>£1,011,648</td><td>—</td><td>—</td></tr><tr><td>2022</td><td>Full data</td><td>£255,820</td><td>£0</td><td>£194,819</td><td>£255,820</td><td>£288,043</td><td>£1,225,864</td><td>—</td><td>—</td></tr><tr><td>2023</td><td>Full data</td><td>-£51,040</td><td>-£13,428</td><td>£61,942</td><td>-£48,486</td><td>-£77,877</td><td>-£121,426</td><td>—</td><td>—</td></tr><tr><td>2024</td><td>Full data</td><td>£177,881</td><td>£22,667</td><td>£64,415</td><td>£181,580</td><td>£148,600</td><td>£251,281</td><td>—</td><td>—</td></tr><tr><td>2025</td><td>Full data</td><td>£86,900</td><td>£23,777</td><td>£15,544</td><td>£83,207</td><td>£88,580</td><td>-£3,763</td><td>—</td><td>—</td></tr><tr><td>2026</td><td>Full data</td><td>-£13,294</td><td>-£112,695</td><td>-£3,331</td><td>-£13,366</td><td>-£52,575</td><td>£17,665</td><td>—</td><td>—</td></tr><tr><td>2023</td><td>Elexon overlap</td><td>-£40,083</td><td>-£13,428</td><td>£61,974</td><td>-£37,528</td><td>-£59,052</td><td>-£100,851</td><td>£370,495</td><td>£283,139</td></tr><tr><td>2024</td><td>Elexon overlap</td><td>£177,881</td><td>£22,667</td><td>£64,415</td><td>£181,580</td><td>£148,600</td><td>£251,281</td><td>-£85,232</td><td>-£46,780</td></tr><tr><td>2025</td><td>Elexon overlap</td><td>£86,900</td><td>£24,684</td><td>£15,544</td><td>£83,207</td><td>£88,580</td><td>-£2,856</td><td>£99,100</td><td>£38,195</td></tr><tr><td>2026</td><td>Elexon overlap</td><td>-£13,294</td><td>-£112,695</td><td>-£3,331</td><td>-£13,366</td><td>-£52,575</td><td>£17,665</td><td>£2,037</td><td>-£21,443</td></tr></tbody></table>
+<p class="small">For Elexon strategies, the 2026 row is partial through 2 October. Full-data rows include the 30% wind-only rule and the all-period always-short benchmark. Annual P/L is gross.</p>
+
+<h2>Interpretation</h2>
+<ul>
+<li>High wind is a useful <strong>fair-value/context</strong> feature: more wind tends to coincide with lower prices relative to gas SRMC.</li>
+<li>The simple short-on-high-wind rule is profitable in aggregate but trails the strongest constant benchmark over the full sample and has substantial drawdown; its year-to-year results vary.</li>
+<li>The Elexon revision direction had positive in-sample P/L over the overlap, but its 2023–2026 results reverse by year. From 2024 onward, revision-only is close to flat and combining it with the wind rule underperformed that rule alone.</li>
+<li>These are gross profits over observed historical prices, not a claim of net returns. They do not include execution prices, transaction costs, slippage, or out-of-sample parameter selection.</li>
+</ul>
+<p class="small">Reproduce from the repository root with <code>python analysis/wind_hypothesis_backtest.py</code>. The script writes this report and <code>analysis/wind_hypothesis_annual_pnl.csv</code>.</p>
+</body>
+</html>
