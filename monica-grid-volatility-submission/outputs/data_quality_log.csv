@@ -1,0 +1,30 @@
+dataset,check,finding,action,count
+market_prices,duplicates,no duplicate rows on `ts_key`,none,0.0
+market_prices,gaps,0 missing half-hour slots; 0 timestamps off the :00/:30 grid,missing slots are not traded or scored (no imputation),0.0
+market_prices,outliers (hard bounds),"0 values of `hr_price` outside [-1,000, 10,000] £/MWh",none,0.0
+market_prices,outliers (spikes),"48 values of `hr_price` beyond ±£1,000/MWh; max £2,586 on 2022-12-12","kept: genuine market events, and the risk being managed",48.0
+market_prices,outliers (hard bounds),"0 values of `hh_price` outside [-1,000, 10,000] £/MWh",none,0.0
+market_prices,outliers (spikes),"47 values of `hh_price` beyond ±£1,000/MWh; max £2,500 on 2021-09-15","kept: genuine market events, and the risk being managed",47.0
+market_prices,outliers (hard bounds),"0 values of `cashout_price` outside [-1,000, 10,000] £/MWh",none,0.0
+market_prices,outliers (spikes),"72 values of `cashout_price` beyond ±£1,000/MWh; max £4,038 on 2021-09-09","kept: genuine market events, and the risk being managed",72.0
+market_prices,consistency,0 clock hours where the two half-hours carry different hourly prices,none needed,0.0
+market_prices,gaps,"307 trailing half-hours without cashout (after 2026-10-02 13:30 UTC, not yet settled)","usable for signals, excluded from P&L",307.0
+market_prices,gaps,655 historical half-hours missing cashout; 243 missing hourly price; 339 missing half-hourly price,those half-hours are not traded or scored,655.0
+market_prices,time zone,21 UK local days have 46 or 50 half-hours (clock changes),all joins and daily aggregation done on UTC days (always 48 half-hours),21.0
+fuel_prices,layout,title row above the header row,header located by name ('UK Power Day'),
+fuel_prices,parsing,0 rows with an unparseable date,dropped,0.0
+fuel_prices,duplicates,0 duplicate days,none,0.0
+fuel_prices,outliers (hard bounds),0 non-positive SRMC values,none,0.0
+fuel_prices,gaps,0 days without SRMC,forward-filled up to 3 days (fuel prices move slowly); 0 remain null and those days are not traded,0.0
+fuel_prices,time zone,`UK Power Day` is a daily label with no time,"joined to the UTC calendar date of each half-hour (assumption, see README)",
+generation_forecasts,duplicates,no duplicate rows on `ts_key`,none,0.0
+generation_forecasts,outliers (hard bounds),"0 values of `wind_fc` outside [0, 40,000] MW",none,0.0
+generation_forecasts,gaps,176 half-hours with no `wind_fc`,guard cannot be evaluated there: see `guard_fail_safe` in config,176.0
+generation_forecasts,lookahead,"outturn (actual) columns present: ccgt, demand, nuclear, wind",never used as trading inputs (only known after delivery),
+demand_forecasts,duplicates,no duplicate rows on `ts_key`,none,0.0
+demand_forecasts,outliers (hard bounds),"0 values of `demand_fc` outside [5,000, 70,000] MW",none,0.0
+demand_forecasts,gaps,366 half-hours with no `demand_fc`,guard cannot be evaluated there: see `guard_fail_safe` in config,366.0
+demand_forecasts,lookahead,"outturn (actual) columns present: demand_indo, demand_itsdo",never used as trading inputs (only known after delivery),
+gfs_renewables_forecast,column labels,"correlation with wind outturn: `wind_forecast` -0.15, `solar_forecast` 0.99",columns are swapped: `solar_forecast` holds wind and vice versa,
+gfs_renewables_forecast,lookahead,"GFS wind error vs actual 297 MW, against 1,012 MW for the generation_forecasts wind forecast","excluded from the strategy: far more accurate than a day-ahead forecast should be, so it is likely reconstructed after the event",
+interconnector_forecasts,gaps,"entirely empty: de_forecast; coverage %: {'be_forecast': 70, 'ie_forecast': 53, 'nl_forecast': 64, 'fr_forecast': 59}","not used: incomplete links, values cluster at link capacity, and adding them did not improve the guard",

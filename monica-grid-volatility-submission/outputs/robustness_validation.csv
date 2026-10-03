@@ -1,0 +1,4 @@
+strategy,as_tested_total_gbp,excl_2025-01-08_total_gbp,executed_at_3pm_total_gbp,executed_at_3pm_sharpe,executed_at_3pm_max_drawdown_gbp
+Always short (-25MW),145009.37499999997,465271.625,458502.125,0.49852475682926456,-348408.375
+V1: short above +10%,185559.125,512280.75,127932.74999999999,0.17910434735860803,-327895.875
+V2: V1 + tight-system guard,278082.875,281281.375,195841.625,0.8761669584536806,-79410.5
