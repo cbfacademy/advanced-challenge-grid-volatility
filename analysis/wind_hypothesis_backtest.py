@@ -465,16 +465,34 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
             valid["position_non_gas_mw"].to_numpy(),
         ),
         (
-            "Always +25 MW, held",
+            "Gas benchmark: always long (+25 MW)",
             np.full(len(valid), POSITION_MW),
             np.full(len(valid), POSITION_MW),
         ),
         (
-            "Always −25 MW, held",
+            "Gas benchmark: always short (−25 MW)",
             np.full(len(valid), -POSITION_MW),
             np.full(len(valid), -POSITION_MW),
         ),
-        ("Flat", np.zeros(len(valid)), np.zeros(len(valid))),
+        ("No action (flat)", np.zeros(len(valid)), np.zeros(len(valid))),
+    ]
+    directional_features = (
+        ("Wind ≥30%", "position_9am_mw"),
+        ("Solar ≥0.5%", "position_solar_mw"),
+        ("Nuclear ≥20%", "position_nuclear_mw"),
+    )
+    directional_strategies: list[tuple[str, np.ndarray, np.ndarray]] = []
+    directional_daily: dict[str, pd.Series] = {}
+    for label, column in directional_features:
+        short_position = valid[column].to_numpy()
+        long_position = -short_position
+        for direction, position in (("Long", long_position), ("Short", short_position)):
+            name = f"{direction} when {label}"
+            directional_strategies.append((name, position, position))
+            directional_daily[name] = daily_pnl(valid, position, position)
+    directional_stats = [
+        performance(valid, x, y, name)
+        for name, x, y in directional_strategies
     ]
     full_stats = [
         performance(valid, x, y, name) for name, x, y in full_strategies
@@ -483,6 +501,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
         name: daily_pnl(valid, x, y)
         for name, x, y in full_strategies
     }
+    full_daily.update(directional_daily)
 
     revision = elexon["wind_revision_mw"].to_numpy()
     x_wind = elexon["position_9am_mw"].to_numpy()
@@ -514,9 +533,14 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
             ),
         ),
         (
-            "Always −25 MW, held",
+            "Gas benchmark: always short (−25 MW)",
             np.full(len(elexon), -POSITION_MW),
             np.full(len(elexon), -POSITION_MW),
+        ),
+        (
+            "No action (flat)",
+            np.zeros(len(elexon)),
+            np.zeros(len(elexon)),
         ),
     ]
     matched_stats = [
@@ -606,11 +630,34 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
                     key: daily_pnl(subset, position, position).sum()
                     for key, position in positions.items()
                 },
+                **{
+                    f"{feature}_{direction}_pnl": daily_pnl(
+                        subset,
+                        (
+                            subset[column].to_numpy()
+                            if direction == "short"
+                            else -subset[column].to_numpy()
+                        ),
+                        (
+                            subset[column].to_numpy()
+                            if direction == "short"
+                            else -subset[column].to_numpy()
+                        ),
+                    ).sum()
+                    for feature, column in directional_features
+                    for direction in ("long", "short")
+                },
+                "gas_always_long_pnl": daily_pnl(
+                    subset,
+                    np.full(len(subset), POSITION_MW),
+                    np.full(len(subset), POSITION_MW),
+                ).sum(),
                 "always_short_pnl": daily_pnl(
                     subset,
                     np.full(len(subset), -POSITION_MW),
                     np.full(len(subset), -POSITION_MW),
                 ).sum(),
+                "no_action_pnl": 0.0,
             }
         )
     for year in sorted(elexon["date"].map(lambda value: value.year).unique()):
@@ -652,11 +699,17 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
                     subset, np.zeros(len(subset)), y_revision
                 ).sum(),
                 "combined_pnl": daily_pnl(subset, x, y_combined).sum(),
+                "gas_always_long_pnl": daily_pnl(
+                    subset,
+                    np.full(len(subset), POSITION_MW),
+                    np.full(len(subset), POSITION_MW),
+                ).sum(),
                 "always_short_pnl": daily_pnl(
                     subset,
                     np.full(len(subset), -POSITION_MW),
                     np.full(len(subset), -POSITION_MW),
                 ).sum(),
+                "no_action_pnl": 0.0,
             }
         )
     annual = pd.DataFrame(annual_rows)
@@ -678,19 +731,23 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
     }
     generation_gap_chart = svg_chart(
         "Forecast generation mix vs DA-HH price minus CCGT SRMC",
-        "Daily quintiles for wind, nuclear, and combined shares; solar split at 0.5% of demand.",
+        "Daily quintiles for wind, nuclear, and combined shares; solar is shown separately.",
         [
             (
                 feature_names[feature],
                 [
-                    (f"Q{i + 1}", float(row["srmc_gap"]))
+                    (
+                        str(row["bin"])
+                        if feature == "solar_share"
+                        else f"Q{i + 1}",
+                        float(row["srmc_gap"]),
+                    )
                     for i, row in feature_bins[feature].iterrows()
                 ],
                 gap_colors[feature],
             )
             for feature in (
                 "wind_share",
-                "solar_share",
                 "nuclear_share",
                 "renewable_share",
                 "non_gas_share",
@@ -779,6 +836,111 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
                     ],
                     "#dc2626",
                 ),
+                (
+                    "Gas benchmark: always long",
+                    full_daily["Gas benchmark: always long (+25 MW)"],
+                    "#0891b2",
+                ),
+                (
+                    "Gas benchmark: always short",
+                    full_daily["Gas benchmark: always short (−25 MW)"],
+                    "#475569",
+                ),
+                (
+                    "No action",
+                    full_daily["No action (flat)"],
+                    "#94a3b8",
+                ),
+            )
+        ],
+        "Cumulative gross P/L (£)",
+        height=500,
+    )
+    long_chart = svg_chart(
+        "Cumulative gross P/L: go long when the generation signal is active",
+        "Long 25 MW only when the specified forecast share threshold is met; otherwise flat.",
+        [
+            (
+                label,
+                list(monthly_cumulative(full_daily[name]).items()),
+                color,
+            )
+            for label, name, color in (
+                (
+                    "Wind ≥30%",
+                    "Long when Wind ≥30%",
+                    "#2563eb",
+                ),
+                (
+                    "Solar ≥0.5%",
+                    "Long when Solar ≥0.5%",
+                    "#f59e0b",
+                ),
+                (
+                    "Nuclear ≥20%",
+                    "Long when Nuclear ≥20%",
+                    "#7c3aed",
+                ),
+                (
+                    "Gas benchmark: always long",
+                    "Gas benchmark: always long (+25 MW)",
+                    "#0891b2",
+                ),
+                (
+                    "Gas benchmark: always short",
+                    "Gas benchmark: always short (−25 MW)",
+                    "#475569",
+                ),
+                (
+                    "No action",
+                    "No action (flat)",
+                    "#94a3b8",
+                ),
+            )
+        ],
+        "Cumulative gross P/L (£)",
+        height=460,
+    )
+    short_chart = svg_chart(
+        "Cumulative gross P/L: go short when the generation signal is active",
+        "Short 25 MW only when the specified forecast share threshold is met; otherwise flat.",
+        [
+            (
+                label,
+                list(monthly_cumulative(full_daily[name]).items()),
+                color,
+            )
+            for label, name, color in (
+                (
+                    "Wind ≥30%",
+                    "Short when Wind ≥30%",
+                    "#2563eb",
+                ),
+                (
+                    "Solar ≥0.5%",
+                    "Short when Solar ≥0.5%",
+                    "#f59e0b",
+                ),
+                (
+                    "Nuclear ≥20%",
+                    "Short when Nuclear ≥20%",
+                    "#7c3aed",
+                ),
+                (
+                    "Gas benchmark: always long",
+                    "Gas benchmark: always long (+25 MW)",
+                    "#0891b2",
+                ),
+                (
+                    "Gas benchmark: always short",
+                    "Gas benchmark: always short (−25 MW)",
+                    "#475569",
+                ),
+                (
+                    "No action",
+                    "No action (flat)",
+                    "#94a3b8",
+                ),
             )
         ],
         "Cumulative gross P/L (£)",
@@ -818,14 +980,24 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
                     "#dc2626",
                 ),
                 (
-                    "Always short",
-                    matched_daily["Always −25 MW, held"],
+                    "Gas benchmark: always long",
+                    matched_daily["Gas benchmark: always long (+25 MW)"],
+                    "#0891b2",
+                ),
+                (
+                    "Gas benchmark: always short",
+                    matched_daily["Gas benchmark: always short (−25 MW)"],
                     "#475569",
+                ),
+                (
+                    "No action",
+                    matched_daily["No action (flat)"],
+                    "#94a3b8",
                 ),
             )
         ],
         "Cumulative gross P/L (£)",
-        height=460,
+        height=500,
     )
     revision_chart = svg_chart(
         "Elexon revision bins vs auction repricing",
@@ -854,6 +1026,18 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
             money(float(item["max_drawdown"])),
         ]
         for item in full_stats
+    ]
+    directional_rows = [
+        [
+            html.escape(str(item["strategy"])),
+            f"{int(item['active_days']):,}",
+            f"{int(item['active_half_hours']):,}",
+            money(float(item["total_pnl"])),
+            f"{item['profitable_days_pct']:.1f}%",
+            number(float(item["daily_sharpe_252"])),
+            money(float(item["max_drawdown"])),
+        ]
+        for item in directional_stats
     ]
     matched_rows = [
         [
@@ -943,7 +1127,9 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
                     if pd.notna(row.get("non_gas_45pct_pnl"))
                     else "—"
                 ),
+                money(float(row["gas_always_long_pnl"])),
                 money(float(row["always_short_pnl"])),
+                money(float(row["no_action_pnl"])),
                 (
                     money(float(row["revision_only_pnl"]))
                     if pd.notna(row.get("revision_only_pnl"))
@@ -980,7 +1166,7 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <body>
 <h1>Wind, solar &amp; nuclear: historical visualisation &amp; gross backtest</h1>
 <p class="lede">GB market history through <strong>{end_date:%Y-%m-%d}</strong>. Positions are capped at ±25 MW; P/L follows the challenge formula and is before trading costs.</p>
-<div class="callout"><strong>Bottom line:</strong> high wind and wind-plus-solar shares show the clearest association with lower DA-HH prices versus CCGT SRMC. Solar by itself is sparse, and nuclear share is not monotonic with that price gap. The specified threshold rules made {money(full_stats[0]["total_pnl"])} (wind), {money(full_stats[1]["total_pnl"])} (solar), {money(full_stats[2]["total_pnl"])} (nuclear), {money(full_stats[3]["total_pnl"])} (wind + solar), and {money(full_stats[4]["total_pnl"])} (wind + solar + nuclear). Always short made {money(full_stats[6]["total_pnl"])} over the same full sample. These are illustrative gross backtests, not evidence of deployable alpha.</div>
+<div class="callout"><strong>Bottom line:</strong> high wind and wind-plus-solar shares show the clearest association with lower DA-HH prices versus CCGT SRMC. Solar by itself is sparse, and nuclear share is not monotonic with that price gap. The specified threshold rules made {money(full_stats[0]["total_pnl"])} (wind), {money(full_stats[1]["total_pnl"])} (solar), {money(full_stats[2]["total_pnl"])} (nuclear), {money(full_stats[3]["total_pnl"])} (wind + solar), and {money(full_stats[4]["total_pnl"])} (wind + solar + nuclear). Gas-referenced always short made {money(full_stats[6]["total_pnl"])} over the same full sample. These are illustrative gross backtests, not evidence of deployable alpha.</div>
 
 <h2>What was tested</h2>
 <ul>
@@ -989,7 +1175,7 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <li><strong>3pm revision rule:</strong> using the latest Elexon wind forecast published strictly before each UK-local 9am and 3pm cutoff, short 25 MW if the forecast rises, long 25 MW if it falls, and hold the 9am position if unchanged. The hourly signal is applied to both half-hours.</li>
 <li><strong>Combined:</strong> apply the Elexon revision rule to both the wind-only and wind-plus-solar 9am positions.</li>
 </ul>
-<p class="note">Thresholds are transparent illustrations, not optimized parameters. Shares are each forecast generation component divided by forecast demand, averaged over two half-hours to match the hourly 9am position. "Wind + solar + nuclear" is a simple total-share proxy, not a full merit-order model. SRMC evaluates the price relationship, not the position rule. P/L is 0.5 × [X × (DA-HH − DA-HR) + Y × (cashout − DA-HH)] for every half-hour.</p>
+<p class="note">Thresholds are transparent illustrations, not optimized parameters. Shares are each forecast generation component divided by forecast demand, averaged over two half-hours to match the hourly 9am position. "Wind + solar + nuclear" is a simple total-share proxy, not a full merit-order model. SRMC evaluates the price relationship, not the position rule. Gas-referenced always-long/short are unconditional ±25 MW power positions benchmarked against the CCGT SRMC context; they are not gas-commodity trades or positions derived from a gas-generation forecast. No action means a zero position and zero P/L. P/L is 0.5 × [X × (DA-HH − DA-HR) + Y × (cashout − DA-HH)] for every half-hour.</p>
 
 <h2>Generation mix, fair-value gap, and auction repricing</h2>
 <div class="chart">{generation_gap_chart}</div>
@@ -1002,6 +1188,11 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <div class="chart">{full_chart}</div>
 {table(["Strategy","Days","Active days","Gross P/L","Profitable days","Daily Sharpe*","Max drawdown"], full_rows)}
 <p>Usable observations: {len(valid):,} half-hours over {complete_dates:,} delivery days. The wind-only 30% rule traded in {wind_active_periods:,} half-hours across {full_stats[0]["active_days"]:,} days. Its most profitable day was {money(full_stats[0]["best_day"])} and its worst was {money(full_stats[0]["worst_day"])}. The level-rule P/L is highly dependent on the selected feature and threshold, and comparisons to the constant-short benchmark remain important.</p>
+<h2>What if the signal went long instead of short?</h2>
+<p>For each feature, the same active condition is used in both directions; long means +25 MW on active intervals and short means −25 MW, with zero position outside the condition. Both gas-referenced unconditional ±25 MW benchmarks and the zero-P/L no-action line are shown.</p>
+<div class="chart">{long_chart}</div>
+<div class="chart">{short_chart}</div>
+{table(["Directional rule","Active days","Active half-hours","Gross P/L","Profitable days","Daily Sharpe*","Max drawdown"], directional_rows)}
 <p class="small">*Annualised daily Sharpe-like statistic, calculated from daily gross P/L with no risk-free adjustment. Maximum drawdown is from cumulative daily P/L starting at £0. No fees, bid/offer, market impact, collateral, or transaction limits beyond ±25 MW are modelled.</p>
 
 <h2>Does the 3pm Elexon signal help?</h2>
@@ -1014,8 +1205,8 @@ th:first-child,td:first-child{{text-align:left}}thead{{background:#f8fafc}}.smal
 <h2>Threshold sensitivity and yearly P/L</h2>
 {table(["Rule / threshold","Gross P/L","Profitable days","Max drawdown"], sensitivity_rows)}
 <p>Changing the 9am wind threshold from 20% to 30% to 40% materially changes gross P/L. Revision magnitude cutoffs likewise change trade frequency and risk; the reported 30% / sign-only result is not a threshold search or selected optimum.</p>
-{table(["Year","Sample","Wind","Solar","Nuclear","Wind + solar","Wind + solar + nuclear","Always short","Revision only","Combined"], annual_table_rows)}
-<p class="small">For Elexon strategies, the 2026 row is partial through 2 October. Full-data rows include the 30% wind-only rule and the all-period always-short benchmark. Annual P/L is gross.</p>
+{table(["Year","Sample","Wind","Solar","Nuclear","Wind + solar","Wind + solar + nuclear","Gas always long","Gas always short","No action","Revision only","Combined"], annual_table_rows)}
+<p class="small">For Elexon strategies, the 2026 row is partial through 2 October. The gas-referenced always-long/short rows are unconditional power-position benchmarks using the challenge P/L formula; no action remains at zero. Annual P/L is gross.</p>
 
 <h2>Interpretation</h2>
 <ul>
