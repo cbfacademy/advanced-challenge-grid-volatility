@@ -51,6 +51,44 @@ See the detailed charts and annual results in
 [`GA_analysis/wind_hypothesis_backtest.html`](GA_analysis/wind_hypothesis_backtest.html)
 and [`GA_analysis/wind_hypothesis_annual_pnl.csv`](GA_analysis/wind_hypothesis_annual_pnl.csv).
 
+## Reproduce from a fresh clone
+
+The market, fuel-price, and forecast input files are included in the repository
+under `data/`; no additional data download or API credentials are required.
+Use Python **3.12.15** and the pinned dependencies in
+[`requirements.txt`](requirements.txt).
+
+macOS / Linux:
+
+```bash
+git clone --branch GA --single-branch https://github.com/recentlyhatched/advanced-challenge-grid-volatility.git
+cd advanced-challenge-grid-volatility
+git branch --show-current
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python GA_analysis/wind_hypothesis_backtest.py
+```
+
+Windows PowerShell:
+
+```powershell
+git clone --branch GA --single-branch https://github.com/recentlyhatched/advanced-challenge-grid-volatility.git
+cd advanced-challenge-grid-volatility
+git branch --show-current
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python GA_analysis/wind_hypothesis_backtest.py
+```
+
+Run the backtest command from the repository root. It regenerates the HTML
+report, annual P/L CSV, and both phase PNGs in `GA_analysis/`. By default, the
+sample ends on **2 October 2026**; to use another date covered by the local
+data, append `--end-date YYYY-MM-DD`.
+The clone command checks out the `GA` branch; `git branch --show-current`
+should print `GA` before you continue.
+
 ## Trade-offs, metrics, and kill conditions
 
 High wind and nuclear short rules were profitable in-sample, while the solar

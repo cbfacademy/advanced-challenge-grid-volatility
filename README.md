@@ -12,39 +12,42 @@ For the decision and the headline results, see
 see [`docs/CHALLENGE.md`](docs/CHALLENGE.md); the available data are described
 in [`data/DATA_DICTIONARY.md`](data/DATA_DICTIONARY.md).
 
-## Requirements
+## Reproduce from a fresh clone
 
-- Python 3.12 (also recorded in [`.python-version`](.python-version))
-- `pip`
-- The historical data files included under `data/`
+The prepared market and forecast files are committed under `data/`, so a clone
+of this repository contains the full input dataset; no separate download or
+API access is required. The analysis was run with **Python 3.12.15**. The
+version is recorded in [`.python-version`](.python-version), and
+[`requirements.txt`](requirements.txt) pins the analysis dependencies and
+their runtime dependencies.
 
-The script needs no database, API credentials, or external data download.
-Install the pinned Python dependencies from the repository root:
+Clone the repository and change into its root:
 
 ```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+git clone https://github.com/recentlyhatched/advanced-challenge-grid-volatility.git
+cd advanced-challenge-grid-volatility
 ```
 
-### Create an isolated environment
+Create an isolated Python 3.12 environment and install the locked dependencies.
+Use Python 3.12.15 to match the tested interpreter exactly.
 
-macOS / Linux:
+macOS / Linux (with Python 3.12.15 installed):
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Windows PowerShell:
+Windows PowerShell (with Python 3.12 installed):
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
+
+Confirm the interpreter with `python --version` (expected: `Python 3.12.15`).
 
 ## Reproduce the analysis
 
@@ -63,6 +66,11 @@ This uses the fixed default end date of **2 October 2026** and writes:
 - `GA_analysis/GA_training_phase_gross_pnl.png` and
   `GA_analysis/GA_validation_phase_gross_pnl.png` — monthly cumulative gross P/L
   split at 1 January 2023; each phase starts from £0.
+
+The script reads the checked-in files in `data/` and overwrites all four
+generated outputs above. It does not write to an absolute path, require a
+local configuration file, access a network service, or use random sampling.
+The console confirms the HTML and CSV output locations.
 
 To run through another delivery date covered by the local data:
 
