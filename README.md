@@ -60,6 +60,9 @@ This uses the fixed default end date of **2 October 2026** and writes:
   generation-mix analysis, and Elexon revision analysis.
 - `GA_analysis/wind_hypothesis_annual_pnl.csv` — annual gross P/L by strategy and
   sample.
+- `GA_analysis/GA_training_phase_gross_pnl.png` and
+  `GA_analysis/GA_validation_phase_gross_pnl.png` — monthly cumulative gross P/L
+  split at 1 January 2023; each phase starts from £0.
 
 To run through another delivery date covered by the local data:
 

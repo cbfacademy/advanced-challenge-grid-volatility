@@ -33,7 +33,21 @@ opposite for the same active observations.
 
 The gas-referenced benchmarks are unconditional power positions evaluated
 with the challenge's power P/L formula; they are not gas-commodity trades.
-Monthly cumulative P/L charts and annual results are in
+
+## Historical gross P/L by phase
+
+Monthly P/L is accumulated from £0 separately in each phase. Validation starts
+on 1 January 2023. This is a retrospective time split, not a strict untouched
+holdout: strategy research used the historical sample.
+
+<table>
+<tr>
+<td><strong>Training phase: before 2023</strong><br><img src="GA_analysis/GA_training_phase_gross_pnl.png" alt="Monthly cumulative gross P/L during the training phase, 2016 to 2022." width="100%"></td>
+<td><strong>Validation phase: 2023 onward</strong><br><img src="GA_analysis/GA_validation_phase_gross_pnl.png" alt="Monthly cumulative gross P/L during the validation phase, 2023 onward." width="100%"></td>
+</tr>
+</table>
+
+See the detailed charts and annual results in
 [`GA_analysis/wind_hypothesis_backtest.html`](GA_analysis/wind_hypothesis_backtest.html)
 and [`GA_analysis/wind_hypothesis_annual_pnl.csv`](GA_analysis/wind_hypothesis_annual_pnl.csv).
 

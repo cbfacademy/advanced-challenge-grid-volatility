@@ -7,14 +7,22 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 OUTPUT = ROOT / "GA_analysis" / "wind_hypothesis_backtest.html"
+TRAINING_PNG = ROOT / "GA_analysis" / "GA_training_phase_gross_pnl.png"
+VALIDATION_PNG = ROOT / "GA_analysis" / "GA_validation_phase_gross_pnl.png"
 TZ = "Europe/London"
 ELEXON_START = pd.Timestamp("2023-01-01").date()
 WIND_THRESHOLD = 0.30
 POSITION_MW = 25.0
+PHASE_SPLIT = pd.Timestamp("2023-01-01")
 
 
 def load_market(end_date: pd.Timestamp) -> pd.DataFrame:
@@ -222,6 +230,90 @@ def monthly_cumulative(daily: pd.Series) -> pd.Series:
     series = daily.copy()
     series.index = pd.to_datetime(series.index.astype(str))
     return series.resample("ME").sum().cumsum()
+
+
+def save_phase_charts(daily_series: dict[str, pd.Series]) -> None:
+    strategies = (
+        ("Wind ≥30%", "Wind ≥30%, short and hold", "#2563eb"),
+        ("Solar ≥0.5%", "Solar ≥0.5%, short and hold", "#f59e0b"),
+        ("Nuclear ≥20%", "Nuclear ≥20%, short and hold", "#7c3aed"),
+        ("Wind + solar ≥30%", "Wind + solar ≥30%, short and hold", "#059669"),
+        (
+            "Wind + solar + nuclear ≥45%",
+            "Wind + solar + nuclear ≥45%, short and hold",
+            "#dc2626",
+        ),
+        (
+            "Gas benchmark: always long",
+            "Gas benchmark: always long (+25 MW)",
+            "#0891b2",
+        ),
+        (
+            "Gas benchmark: always short",
+            "Gas benchmark: always short (−25 MW)",
+            "#475569",
+        ),
+        ("No action", "No action (flat)", "#94a3b8"),
+    )
+    phases = (
+        (
+            "Training phase (2016–2022)",
+            lambda dates: dates < PHASE_SPLIT,
+            TRAINING_PNG,
+        ),
+        (
+            "Validation phase (2023 onward)",
+            lambda dates: dates >= PHASE_SPLIT,
+            VALIDATION_PNG,
+        ),
+    )
+
+    for title, date_filter, output_path in phases:
+        figure, axis = plt.subplots(figsize=(9.5, 5.4), constrained_layout=True)
+        phase_months: pd.DatetimeIndex | None = None
+        for label, strategy, color in strategies:
+            daily = daily_series[strategy]
+            dates = pd.to_datetime(daily.index.astype(str))
+            phase_daily = daily.loc[date_filter(dates)]
+            cumulative = monthly_cumulative(phase_daily)
+            phase_months = cumulative.index
+            axis.plot(
+                cumulative.index,
+                cumulative.to_numpy(),
+                label=label,
+                color=color,
+                linewidth=1.8,
+            )
+
+        if phase_months is not None:
+            axis.set_xlim(
+                phase_months.min().replace(month=1, day=1),
+                phase_months.max() + pd.Timedelta(days=20),
+            )
+        axis.axhline(0, color="#64748b", linewidth=0.9, linestyle="--")
+        axis.set_title(f"{title}: monthly cumulative gross P/L", loc="left")
+        axis.set_ylabel("Cumulative gross P/L (£)")
+        axis.set_xlabel("Delivery month")
+        axis.yaxis.set_major_formatter(
+            matplotlib.ticker.FuncFormatter(
+                lambda value, _: (
+                    f"-£{abs(value):,.0f}" if value < 0 else f"£{value:,.0f}"
+                )
+            )
+        )
+        axis.xaxis.set_major_locator(mdates.YearLocator())
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        axis.grid(axis="y", color="#e2e8f0", linewidth=0.7)
+        axis.spines[["top", "right"]].set_visible(False)
+        axis.legend(
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.16),
+            ncol=2,
+            frameon=False,
+            fontsize=8,
+        )
+        figure.savefig(output_path, dpi=180, bbox_inches="tight")
+        plt.close(figure)
 
 
 def svg_chart(
@@ -502,6 +594,7 @@ def build_report(end_date: pd.Timestamp) -> tuple[str, pd.DataFrame]:
         for name, x, y in full_strategies
     }
     full_daily.update(directional_daily)
+    save_phase_charts(full_daily)
 
     revision = elexon["wind_revision_mw"].to_numpy()
     x_wind = elexon["position_9am_mw"].to_numpy()
